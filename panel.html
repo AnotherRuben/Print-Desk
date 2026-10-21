@@ -1,0 +1,445 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Print Desk</title>
+<style>
+  :root {
+    --bg: #15161a; --card: #1e2026; --line: #2d3038; --text: #e8e6e1; --muted: #9a9890;
+    --paper: #f4f1e8; --ink: #1d1c19;
+    --ok: #4cc38a; --warn: #e8a33d; --err: #e5534b; --accent: #e8a33d;
+    --btn: #2a2d35; --btn-hover: #343843;
+  }
+  @media (prefers-color-scheme: light) {
+    :root { --bg: #eceae4; --card: #fbfaf7; --line: #dcd9d0; --text: #1d1c19; --muted: #6b6960;
+            --btn: #efede7; --btn-hover: #e4e1d9; --accent: #c98a2b; --warn: #a8640c; --ok: #23874f;
+            --paper: #fffdf6; }
+    .receipt { box-shadow: 0 0 0 1px var(--line), 0 2px 6px rgba(0,0,0,.06); }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 980px; margin: 0 auto; padding: 14px; }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+  h1 { font-size: 17px; margin: 0; font-weight: 600; letter-spacing: .02em; display: flex; align-items: center; gap: 8px; }
+  h1 svg { width: 20px; height: 20px; }
+  h2 { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase;
+       letter-spacing: .06em; margin: 0 0 10px; }
+  .settings-link { display: flex; align-items: center; gap: 6px; color: var(--muted); text-decoration: none; font-weight: 600; }
+  .settings-link:hover { color: var(--text); }
+  @media (max-width: 420px) { .settings-link span { display: none; } }
+  .pill { font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 999px; }
+  .pill.live { background: color-mix(in srgb, var(--ok) 18%, transparent); color: var(--ok); }
+  .pill.paused { background: color-mix(in srgb, var(--warn) 20%, transparent); color: var(--warn); }
+  .pill.down { background: color-mix(in srgb, var(--err) 18%, transparent); color: var(--err); }
+  .grid { display: grid; gap: 12px; grid-template-columns: 1fr; }
+  @media (min-width: 720px) { .grid { grid-template-columns: 1fr 1fr; } .wide { grid-column: 1 / -1; } }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 14px; min-width: 0; }
+  .actions { display: grid; gap: 8px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  @media (min-width: 720px) { .actions { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+  button { font: inherit; font-weight: 600; color: var(--text); background: var(--btn);
+           border: 1px solid var(--line); border-radius: 8px; padding: 12px 10px; cursor: pointer;
+           min-height: 46px; touch-action: manipulation; }
+  button:hover { background: var(--btn-hover); }
+  button:active { transform: translateY(1px); }
+  button:disabled { opacity: .5; cursor: default; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #1d1c19; }
+  button.small { min-height: 0; padding: 6px 12px; font-size: 13px; }
+  .held { display: none; margin-top: 10px; padding: 10px 12px; border-radius: 8px;
+          background: color-mix(in srgb, var(--warn) 14%, transparent);
+          border: 1px solid color-mix(in srgb, var(--warn) 40%, transparent);
+          align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+  .held.show { display: flex; }
+  .row { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0;
+         border-bottom: 1px solid var(--line); }
+  .row:last-child { border-bottom: 0; }
+  .row .k { display: flex; align-items: center; gap: 8px; }
+  .row .v { color: var(--muted); text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex: none; }
+  .dot.ok { background: var(--ok); } .dot.warn { background: var(--warn); } .dot.error { background: var(--err); }
+  .slipbox { container-type: inline-size; }
+  .receipt { background: var(--paper); color: var(--ink); border-radius: 2px; padding: 12px 8px 16px;
+             font: 11.5px/1.35 ui-monospace, "Cascadia Mono", Consolas, monospace; white-space: pre;
+             font-size: min(11.5px, calc((100cqw - 16px) / 29.2));
+             overflow-x: auto; max-height: 360px; overflow-y: auto;
+             -webkit-mask-image: linear-gradient(#000 92%, transparent); }
+  .empty { color: var(--muted); font-style: italic; }
+  .log { font: 12.5px/1.5 ui-monospace, "Cascadia Mono", Consolas, monospace; max-height: 320px; overflow-y: auto; }
+  .log div { display: grid; grid-template-columns: 44px 76px minmax(0, 1fr); gap: 8px; padding: 2px 0; }
+  .log .t { color: var(--muted); }
+  .log .kind { font-weight: 600; }
+  .log .k-printed { color: var(--ok); } .log .k-skipped, .log .k-discarded, .log .k-panel { color: var(--muted); }
+  .log .k-bundled, .log .k-held, .log .k-hype, .log .k-acars, .log .k-flight { color: var(--warn); } .log .k-failed { color: var(--err); }
+  .log .k-skipped + span, .log .k-discarded + span { color: var(--muted); }
+  .log span:last-child { overflow-wrap: anywhere; }
+  .meta { color: var(--muted); font-size: 12px; margin-top: 8px; }
+  .fl-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+  .fl-cs { font: 700 20px ui-monospace, "Cascadia Mono", Consolas, monospace; letter-spacing: .03em; }
+  .fl-route { color: var(--muted); font: 600 14px ui-monospace, Consolas, monospace; margin-left: 8px; }
+  .fl-grid { display: grid; gap: 10px; grid-template-columns: 1fr; }
+  @media (min-width: 720px) { .fl-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+  .tile { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; min-width: 0; }
+  .tile h3 { margin: 0 0 6px; font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+  .lamp { display: flex; align-items: center; gap: 8px; font-weight: 650; }
+  .lamp .bulb { width: 12px; height: 12px; border-radius: 50%; background: var(--muted); flex: none; }
+  .lamp.ok .bulb { background: var(--ok); box-shadow: 0 0 8px color-mix(in srgb, var(--ok) 70%, transparent); }
+  .lamp.warn .bulb { background: var(--warn); box-shadow: 0 0 8px color-mix(in srgb, var(--warn) 70%, transparent); }
+  .lamp.error .bulb { background: var(--err); box-shadow: 0 0 8px color-mix(in srgb, var(--err) 70%, transparent); }
+  .lamp.warn .bulb.blink { animation: blink 1s steps(2, start) infinite; }
+  @keyframes blink { to { visibility: hidden; } }
+  @media (prefers-reduced-motion: reduce) { .lamp .bulb.blink { animation: none; } }
+  .tile .sub { color: var(--muted); font-size: 12px; margin-top: 4px; overflow-wrap: anywhere; }
+  .tile .row-b { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+  .tile input { font: 600 13px ui-monospace, Consolas, monospace; width: 90px; color: var(--text); background: var(--bg);
+                border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; text-transform: uppercase; }
+  .msgs-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 14px; padding-bottom: 8px; }
+  .msgs-head .btn-link { margin-left: auto; }
+  .btn-link { font-weight: 600; color: var(--text); background: var(--btn); border: 1px solid var(--line); border-radius: 8px;
+              padding: 6px 12px; font-size: 13px; text-decoration: none; }
+  .btn-link:hover { background: var(--btn-hover); }
+  .msgs { border-top: 1px solid var(--line); }
+  .msg { display: grid; grid-template-columns: 52px minmax(0, 1fr) auto; gap: 10px; align-items: start; padding: 8px 0; border-bottom: 1px solid var(--line); }
+  .msg:last-child { border-bottom: 0; }
+  .msg .mt { color: var(--muted); font: 12px ui-monospace, Consolas, monospace; padding-top: 2px; }
+  .msg .mh { font-weight: 650; font-size: 13px; }
+  .msg .mh small { color: var(--muted); font-weight: 600; text-transform: uppercase; margin-left: 6px; }
+  .msg .mb { font: 12.5px/1.4 ui-monospace, Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere;
+             display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .msg.old { opacity: .5; }
+  .tag { font-size: 11px; color: var(--ok); font-weight: 700; }
+  .ap { display: flex; align-items: center; gap: 12px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+  .switch { position: relative; width: 44px; height: 26px; flex: none; }
+  .switch input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; z-index: 1; }
+  .switch .track { position: absolute; inset: 0; border-radius: 999px; background: var(--btn); border: 1px solid var(--line); transition: .15s; }
+  .switch .track::after { content: ""; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%;
+                          background: var(--muted); transition: .15s; }
+  .switch input:checked + .track { background: var(--accent); border-color: var(--accent); }
+  .switch input:checked + .track::after { left: 21px; background: #1d1c19; }
+  .switch input:focus-visible + .track { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .ap .t1 { font-weight: 650; }
+  .ap .t2 { color: var(--muted); font-size: 12px; }
+  .ap .lampdot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; background: var(--muted); }
+  .ap .lampdot.on { background: var(--warn); box-shadow: 0 0 6px color-mix(in srgb, var(--warn) 70%, transparent); }
+  #toast { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%) translateY(20px);
+           background: var(--text); color: var(--bg); padding: 10px 16px; border-radius: 8px;
+           font-weight: 600; opacity: 0; transition: .2s; pointer-events: none; max-width: calc(100% - 32px); }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  #toast.bad { background: var(--err); color: #fff; }
+  #offline { display: none; margin-bottom: 12px; padding: 10px 12px; border-radius: 8px;
+             background: color-mix(in srgb, var(--err) 16%, transparent); color: var(--err); font-weight: 600; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V3h12v6"/><rect x="3" y="9" width="18" height="8" rx="2"/><path d="M7 14h10v7H7z"/></svg>Print Desk</h1>
+    <span style="display:flex;align-items:center;gap:12px">
+      <span id="mode" class="pill live">Live</span>
+      <a href="/stream-log" class="settings-link" target="printdesk-stream-log" aria-label="Stream log">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 2h12v20l-3-2-3 2-3-2-3 2z"/><path d="M9 7h6M9 11h6M9 15h4"/></svg>
+        <span>Stream log</span>
+      </a>
+      <a href="/settings" class="settings-link" aria-label="Settings">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        <span>Settings</span>
+      </a>
+    </span>
+  </header>
+
+  <div id="offline">Print Desk isn't running. Start it with start.bat.</div>
+  <div id="setup" style="display:none;margin-bottom:12px;padding:10px 12px;border-radius:8px;border:1px solid var(--line);background:var(--card)">
+    Something needs setting up. <a href="/settings" style="color:var(--accent);font-weight:600">Open settings</a>
+  </div>
+
+  <div class="grid">
+    <section class="card wide">
+      <div class="actions">
+        <button id="pause">Pause stream printing</button>
+        <button id="ofp" class="primary">Print OFP</button>
+        <button id="test">Test slip</button>
+        <button id="reprint">Reprint last</button>
+      </div>
+      <div class="ap">
+        <label class="switch"><input type="checkbox" id="ap-on" aria-describedby="ap-text"><span class="track"></span></label>
+        <div style="min-width:0">
+          <div class="t1"><label for="ap-on">Auto-pause in busy flight phases</label></div>
+          <div class="t2" id="ap-text"></div>
+        </div>
+      </div>
+      <div id="held" class="held">
+        <div style="min-width:0;flex:1 1 260px">
+          <div id="held-text" style="font-weight:650"></div>
+          <div id="held-list" class="meta" style="margin-top:2px;overflow-wrap:anywhere"></div>
+        </div>
+        <span style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="small primary" id="print-held">One receipt</button>
+          <button class="small" id="print-each">One by one</button>
+          <button class="small" id="discard">Don't print</button>
+        </span>
+      </div>
+    </section>
+
+    <section class="card wide" id="flight-card">
+      <div id="no-flight">
+        <div class="fl-head" style="margin:0">
+          <div><h2 style="margin:0 0 4px">Flight</h2><span class="empty">No flight active. Datalink and arrival weather start with a flight.</span></div>
+          <button id="fl-start">Start flight from SimBrief</button>
+        </div>
+      </div>
+      <div id="flight" style="display:none">
+        <div class="fl-head">
+          <div><span class="fl-cs" id="fl-cs"></span><span class="fl-route" id="fl-route"></span></div>
+          <button id="fl-end" class="small">End flight</button>
+        </div>
+        <div class="fl-grid">
+          <div class="tile">
+            <h3>Datalink station</h3>
+            <div class="lamp" id="st-lamp"><span class="bulb"></span><span id="st-text"></span></div>
+            <div class="sub" id="st-sub"></div>
+            <div class="row-b"><input id="st-name" aria-label="Station" maxlength="10"><button class="small" id="st-set">Change</button></div>
+          </div>
+          <div class="tile">
+            <h3>Clearance request</h3>
+            <div class="lamp" id="rq-lamp"><span class="bulb" id="rq-bulb"></span><span id="rq-text"></span></div>
+            <div class="sub" id="rq-sub"></div>
+            <div class="row-b"><button id="rq-go" class="primary">Clearance requested</button><button class="small" id="rq-cancel">Stop timer</button></div>
+          </div>
+          <div class="tile">
+            <h3>Weather</h3>
+            <div class="lamp" id="dp-lamp"><span class="bulb"></span><span id="dp-text"></span></div>
+            <div class="sub" id="dp-sub"></div>
+            <div class="lamp" id="ar-lamp" style="margin-top:8px"><span class="bulb"></span><span id="ar-text"></span></div>
+            <div class="sub" id="ar-sub"></div>
+            <div class="row-b"><button class="small" id="dp-now">Departure now</button><button class="small" id="ar-now">Arrival now</button></div>
+          </div>
+        </div>
+        <div class="msgs-head"><h2 style="margin:0">Messages</h2><span class="meta" id="pmode" style="margin:0"></span><a class="btn-link" href="/log" target="printdesk-log">Open datalink log</a></div>
+        <div class="msgs" id="msgs"></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Connections</h2>
+      <div id="conn"></div>
+      <div class="meta" id="queue"></div>
+    </section>
+
+    <section class="card">
+      <h2>What prints</h2>
+      <div id="rules"></div>
+    </section>
+
+    <section class="card">
+      <h2>Last slip</h2>
+      <div class="slipbox"><div id="last" class="empty">Nothing printed yet.</div></div>
+    </section>
+
+    <section class="card">
+      <h2>Log</h2>
+      <div id="log" class="log"><span class="empty">Waiting for events.</span></div>
+    </section>
+  </div>
+</main>
+<div id="toast" role="status"></div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const NAMES = { twitch: "Twitch", streamelements: "StreamElements", youtube: "YouTube", pushover: "Pushover",
+                printer: "Printer", console: "Console" };
+let state = null, lastText = null;
+
+function toast(msg, bad) {
+  const t = $("toast");
+  t.textContent = msg; t.className = bad ? "show bad" : "show";
+  clearTimeout(toast.timer); toast.timer = setTimeout(() => t.className = bad ? "bad" : "", 3200);
+}
+
+async function act(path, btn) {
+  if (btn) btn.disabled = true;
+  try {
+    const r = await fetch("/api/" + path, { method: "POST" });
+    const d = await r.json();
+    toast(d.message, !d.ok);
+  } catch (e) {
+    toast("Print Desk isn't responding.", true);
+  } finally {
+    if (btn) btn.disabled = false;
+    refresh();
+  }
+}
+
+function esc(s) {
+  return String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+}
+
+function render(s) {
+  const mode = $("mode");
+  mode.textContent = s.paused ? "Paused" : "Live";
+  mode.className = "pill " + (s.paused ? "paused" : "live");
+
+  const pause = $("pause");
+  pause.textContent = s.paused ? "Resume (one receipt)" : "Pause stream printing";
+  pause.dataset.action = s.paused ? "resume" : "pause";
+
+  const ofp = $("ofp");
+  ofp.disabled = s.ofp_busy || !s.simbrief;
+  ofp.textContent = s.ofp_busy ? "Fetching OFP…" : "Print OFP";
+  ofp.title = s.simbrief ? "" : "Set your SimBrief username in config.toml";
+  $("reprint").disabled = !s.last;
+
+  const a = s.away, items = a ? a.items.length + a.slips.length : 0, held = s.held.length;
+  $("held").classList.toggle("show", !!a || held > 0);
+  if (a) {
+    const why = a.owner === "auto" ? ` automatically (${a.reason})` : "";
+    $("held-text").textContent = items ? `Paused${why} since ${a.since} - ${items} collected` : `Paused${why} since ${a.since} - nothing yet`;
+    const names = [...a.items, ...a.slips];
+    $("held-list").textContent = names.length ? names.slice(-12).join(" · ") + (names.length > 12 ? ` · and ${names.length - 12} more` : "")
+                                              : "Everything that comes in now is collected. Resume to print it.";
+    $("print-held").textContent = "Resume: one receipt";
+  } else {
+    $("held-text").textContent = `${held} slip${held === 1 ? "" : "s"} held while paused`;
+    $("held-list").textContent = "";
+    $("print-held").textContent = "Print them";
+  }
+  $("print-each").style.display = a && items ? "" : "none";
+  $("discard").style.display = !a || items ? "" : "none";
+
+  const SRC = ["twitch", "streamelements", "youtube"];
+  const order = [...SRC, ...Object.keys(s.conn).filter(k => !SRC.includes(k))];
+  $("conn").innerHTML = order.filter(k => s.conn[k]).map(k => {
+    const c = s.conn[k];
+    return `<div class="row"><span class="k"><span class="dot ${c.level}"></span>${esc(NAMES[k] || k)}</span>` +
+           `<span class="v" title="${esc(c.detail)}">${esc(c.detail)}</span></div>`;
+  }).join("") || '<span class="empty">Starting…</span>';
+  $("setup").style.display = Object.values(s.conn).some(c => c.level === "error") ? "block" : "none";
+  $("queue").textContent = s.queue ? `${s.queue} slip(s) waiting to print` : `Output: ${s.outputs}`;
+
+  $("rules").innerHTML = s.rules.map(([k, v]) =>
+    `<div class="row"><span class="k">${esc(k)}</span><span class="v">${esc(v)}</span></div>`).join("");
+
+  if (s.last_text !== lastText) {
+    lastText = s.last_text;
+    const last = $("last");
+    if (lastText) { last.className = "receipt"; last.textContent = lastText; }
+    else { last.className = "empty"; last.textContent = "Nothing printed yet."; }
+  }
+
+  const ap = s.autopause || {}, top = (ap.altitude_ft || 15000).toLocaleString("en-GB");
+  if (document.activeElement !== $("ap-on")) $("ap-on").checked = !!ap.enabled;
+  $("ap-text").innerHTML = !ap.enabled
+    ? `Off. When on: paused from taxi until ${top} ft, and from ${top} ft until parked. Uses your position on VATSIM.`
+    : `<span class="lampdot${ap.paused ? " on" : ""}"></span>` + esc(ap.text || "");
+  renderFlight(s.flight);
+  $("log").innerHTML = s.log.length ? s.log.map(e =>
+    `<div><span class="t">${esc(e.time)}</span><span class="kind k-${esc(e.kind)}">${esc(e.kind)}</span><span>${esc(e.text)}</span></div>`
+  ).join("") : '<span class="empty">Waiting for events.</span>';
+}
+
+async function refresh() {
+  try {
+    const r = await fetch("/api/state", { cache: "no-store" });
+    state = await r.json();
+    $("offline").style.display = "none";
+    render(state);
+  } catch (e) {
+    $("offline").style.display = "block";
+    $("mode").textContent = "Offline"; $("mode").className = "pill down";
+  }
+}
+
+function renderFlight(f) {
+  $("no-flight").style.display = f ? "none" : "block";
+  $("flight").style.display = f ? "block" : "none";
+  if (!f) return;
+  const i = f.info;
+  $("fl-cs").textContent = i.callsign;
+  $("fl-route").textContent = `${i.origin} \u2192 ${i.destination}` + (i.alternate ? `  ALTN ${i.alternate}` : "");
+
+  const st = $("st-lamp");
+  if (f.hoppie.level !== "ok") {
+    st.className = "lamp " + (f.hoppie.level === "error" ? "error" : "");
+    $("st-text").textContent = f.hoppie.level === "error" ? "Hoppie unreachable" : "Datalink off";
+    $("st-sub").textContent = f.hoppie.detail;
+  } else {
+    st.className = "lamp " + (f.station_online === true ? "ok" : f.station_online === false ? "error" : "");
+    $("st-text").textContent = f.station_online === true ? `${f.station} logged on` :
+                               f.station_online === false ? `${f.station} not logged on` : `Checking ${f.station}\u2026`;
+    $("st-sub").textContent = (f.aircraft_online ? "Your aircraft is on Hoppie. " : f.aircraft_online === false ? "Your aircraft isn't on Hoppie yet. " : "") + f.hoppie.detail;
+  }
+  if (document.activeElement !== $("st-name")) $("st-name").value = f.station;
+
+  const r = f.request, rl = $("rq-lamp"), bulb = $("rq-bulb");
+  bulb.classList.remove("blink");
+  const mmss = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+  if (!r) { rl.className = "lamp"; $("rq-text").textContent = "No request pending"; $("rq-sub").textContent = "Press after sending your PDC request in the aircraft."; }
+  else if (r.state === "waiting") { rl.className = "lamp"; $("rq-text").textContent = `Waiting ${mmss(r.seconds)}`; $("rq-sub").textContent = `Times out at ${mmss(r.timeout)}.`; }
+  else if (r.state === "late") { rl.className = "lamp warn"; bulb.classList.add("blink"); $("rq-text").textContent = `No reply yet ${mmss(r.seconds)}`; $("rq-sub").textContent = `Times out at ${mmss(r.timeout)}.`; }
+  else if (r.state === "received") { rl.className = "lamp ok"; $("rq-text").textContent = "Reply received"; $("rq-sub").textContent = ""; }
+  else { rl.className = "lamp error"; $("rq-text").textContent = "No reply - revert to voice"; $("rq-sub").textContent = f.print_mode === "auto" ? "Printed." : "In the log."; }
+  $("rq-cancel").style.display = r && (r.state === "waiting" || r.state === "late") ? "" : "none";
+
+  const d = f.departure, dl = $("dp-lamp");
+  if (f.departure_mode === "off") { dl.className = "lamp"; $("dp-text").textContent = `${i.origin}: off`; $("dp-sub").textContent = ""; }
+  else if (d.printed) { dl.className = "lamp ok"; $("dp-text").textContent = `${i.origin} weather ${d.status === "logged" ? "in the log" : "printed"}`; $("dp-sub").textContent = ""; }
+  else { dl.className = "lamp"; $("dp-text").textContent = `${i.origin}: when you connect`; $("dp-sub").textContent = d.status === "waiting" ? "Fetched when you connect to VATSIM at the gate." : d.status; }
+
+  const a = f.arrival, al = $("ar-lamp");
+  if (f.arrival_nm == null) { al.className = "lamp"; $("ar-text").textContent = "Off"; $("ar-sub").textContent = "Switched off in Settings."; }
+  else if (a.printed) { al.className = "lamp ok"; $("ar-text").textContent = `${i.destination} weather ${a.status === "logged" ? "in the log" : "printed"}`; $("ar-sub").textContent = ""; }
+  else if (a.distance != null) { al.className = "lamp"; $("ar-text").textContent = `${a.distance} NM to ${i.destination}`; $("ar-sub").textContent = `Fetched at ${f.arrival_nm} NM (ATIS, or METAR if none).`; }
+  else { al.className = "lamp"; $("ar-text").textContent = `At ${f.arrival_nm} NM`; $("ar-sub").textContent = a.status === "waiting" ? "Waiting for your position on VATSIM." : a.status; }
+
+  $("pmode").textContent = f.print_mode === "auto" ? "Printing automatically" : "Log only - print from the log";
+  $("msgs").innerHTML = f.messages.length ? f.messages.map(m => `
+    <div class="msg${m.old ? " old" : ""}">
+      <span class="mt">${esc(m.time)}</span>
+      <div><div class="mh">${esc(m.from)}<small>${esc(m.type)}</small>${m.old ? ' <small>before this flight</small>' : ""}${m.printed ? ' <span class="tag">printed</span>' : ""}</div>
+           <div class="mb">${esc(m.text)}</div></div>
+      <button class="small" data-print="${m.id}">Print</button>
+    </div>`).join("") : '<div class="meta">No datalink messages for this callsign yet.</div>';
+  $("msgs").querySelectorAll("[data-print]").forEach(b => b.onclick = () => act("flight/print/" + b.dataset.print, b));
+}
+
+$("fl-start").onclick = (e) => act("flight/start", e.currentTarget);
+$("fl-end").onclick = (e) => act("flight/end", e.currentTarget);
+$("rq-go").onclick = (e) => act("flight/requested", e.currentTarget);
+$("rq-cancel").onclick = (e) => act("flight/cancel", e.currentTarget);
+$("ar-now").onclick = (e) => act("flight/arrival", e.currentTarget);
+$("dp-now").onclick = (e) => act("flight/departure", e.currentTarget);
+$("st-set").onclick = async (e) => {
+  const r = await fetch("/api/flight/station", { method: "POST", headers: { "Content-Type": "application/json" },
+                         body: JSON.stringify({ station: $("st-name").value }) });
+  const d = await r.json(); toast(d.message, !d.ok); refresh();
+};
+
+$("ap-on").onchange = async (e) => {
+  try {
+    const r = await fetch("/api/autopause", { method: "POST", headers: { "Content-Type": "application/json" },
+                                             body: JSON.stringify({ enabled: e.target.checked }) });
+    const d = await r.json(); toast(d.message, !d.ok);
+  } catch (err) { toast("Print Desk isn't responding.", true); }
+  refresh();
+};
+$("pause").onclick = (e) => act(e.currentTarget.dataset.action || "pause", e.currentTarget);
+$("ofp").onclick = (e) => act("ofp", e.currentTarget);
+$("test").onclick = (e) => act("test", e.currentTarget);
+$("reprint").onclick = (e) => act("reprint", e.currentTarget);
+async function resume(mode, btn) {
+  btn.disabled = true;
+  try {
+    const r = await fetch("/api/resume", { method: "POST", headers: { "Content-Type": "application/json" },
+                                          body: JSON.stringify({ mode }) });
+    const d = await r.json(); toast(d.message, !d.ok);
+  } catch (e) { toast("Print Desk isn't responding.", true); }
+  finally { btn.disabled = false; refresh(); }
+}
+$("print-held").onclick = (e) => resume("receipt", e.currentTarget);
+$("print-each").onclick = (e) => resume("each", e.currentTarget);
+$("discard").onclick = (e) => resume("discard", e.currentTarget);
+
+refresh();
+setInterval(refresh, 2000);
+</script>
+</body>
+</html>

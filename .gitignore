@@ -1,0 +1,15 @@
+# Your own settings, logins and history: never commit these
+config.toml
+twitch_tokens.json
+*.jsonl
+*.log
+printer.lock
+last_running.txt
+se_history_*.json
+
+# Caches Print Desk fills by itself
+avatar_cache/
+emote_cache/
+stream_log_images/
+__pycache__/
+*.tmp

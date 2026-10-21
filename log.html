@@ -1,0 +1,438 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Datalink log</title>
+<style>
+  :root {
+    --bg: #15161a; --card: #1e2026; --line: #2d3038; --text: #e8e6e1; --muted: #9a9890;
+    --paper: #f4f1e8; --ink: #1d1c19;
+    --ok: #4cc38a; --warn: #e8a33d; --err: #e5534b; --accent: #e8a33d;
+    --btn: #2a2d35; --btn-hover: #343843; --sel: #272a32;
+  }
+  @media (prefers-color-scheme: light) {
+    :root { --bg: #eceae4; --card: #fbfaf7; --line: #dcd9d0; --text: #1d1c19; --muted: #6b6960;
+            --btn: #efede7; --btn-hover: #e4e1d9; --accent: #c98a2b; --warn: #a8640c; --ok: #23874f;
+            --paper: #fffdf6; --sel: #f1eee6; }
+    .receipt { box-shadow: 0 0 0 1px var(--line), 0 2px 6px rgba(0,0,0,.06); }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 1180px; margin: 0 auto; padding: 14px 16px; }
+  header { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+  h1 { font-size: 17px; margin: 0; font-weight: 600; letter-spacing: .02em; }
+  .back { color: var(--muted); text-decoration: none; font-weight: 600; }
+  .back:hover { color: var(--text); }
+  .flt { font: 700 14px ui-monospace, "Cascadia Mono", Consolas, monospace; color: var(--muted); }
+  .mode { margin-left: auto; font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 999px;
+          background: color-mix(in srgb, var(--muted) 18%, transparent); color: var(--muted); }
+  .mode.auto { background: color-mix(in srgb, var(--warn) 20%, transparent); color: var(--warn); }
+
+  .bar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+  .chips { display: flex; gap: 4px; background: var(--card); border: 1px solid var(--line); border-radius: 9px; padding: 3px; flex-wrap: wrap; }
+  .chips button { font: inherit; font-size: 13px; font-weight: 600; color: var(--muted); background: none; border: 0;
+                  border-radius: 6px; padding: 6px 11px; cursor: pointer; }
+  .chips button[aria-pressed="true"] { background: var(--btn-hover); color: var(--text); }
+  .chips button .c { font-weight: 500; opacity: .7; margin-left: 4px; font-variant-numeric: tabular-nums; }
+  select, input[type=search] { font: inherit; font-size: 13px; color: var(--text); background: var(--card);
+         border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; min-width: 0; }
+  input[type=search] { flex: 1 1 160px; max-width: 280px; }
+  button.act { font: inherit; font-weight: 600; color: var(--text); background: var(--btn); border: 1px solid var(--line);
+               border-radius: 8px; padding: 7px 12px; cursor: pointer; font-size: 13px; }
+  button.act:hover { background: var(--btn-hover); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #1d1c19; }
+  button.primary:hover { filter: brightness(1.05); background: var(--accent); }
+  button:disabled { opacity: .5; cursor: default; }
+
+  .split { display: grid; gap: 12px; grid-template-columns: 1fr; }
+  @media (min-width: 820px) { .split { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; } }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; min-width: 0; }
+  .list { max-height: calc(100vh - 150px); overflow-y: auto; }
+  @media (max-width: 819px) { .list { max-height: none; } .detail { order: -1; } }
+  .grp { position: sticky; top: 0; z-index: 1; background: var(--card); padding: 8px 14px 6px; border-bottom: 1px solid var(--line);
+         font: 700 12px ui-monospace, Consolas, monospace; color: var(--muted); letter-spacing: .04em; }
+  .item { display: grid; grid-template-columns: 50px minmax(0, 1fr) auto; gap: 10px; padding: 9px 14px;
+          border-bottom: 1px solid var(--line); cursor: pointer; align-items: start; }
+  .item:last-child { border-bottom: 0; }
+  .item:hover { background: var(--sel); }
+  .item[aria-selected="true"] { background: var(--sel); box-shadow: inset 3px 0 0 var(--accent); }
+  .item .t { color: var(--muted); font: 12px ui-monospace, Consolas, monospace; padding-top: 2px; }
+  .item .h { font-weight: 650; font-size: 13px; display: flex; gap: 6px; align-items: center; min-width: 0; }
+  .item .h .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .item .b { color: var(--muted); font: 12px/1.4 ui-monospace, Consolas, monospace; overflow: hidden;
+             text-overflow: ellipsis; white-space: nowrap; margin-top: 2px; }
+  .item.old { opacity: .55; }
+  .cat { font-size: 10.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; padding: 1px 6px;
+         border-radius: 4px; flex: none; background: color-mix(in srgb, var(--muted) 18%, transparent); color: var(--muted); }
+  .cat.cpdlc { background: color-mix(in srgb, #5aa9e6 22%, transparent); color: #5aa9e6; }
+  .cat.telex { background: color-mix(in srgb, var(--ok) 20%, transparent); color: var(--ok); }
+  .cat.weather { background: color-mix(in srgb, #a98be8 22%, transparent); color: #a98be8; }
+  .cat.notice { background: color-mix(in srgb, var(--err) 18%, transparent); color: var(--err); }
+  .cat.subs { background: color-mix(in srgb, #a98be8 22%, transparent); color: #a98be8; }
+  .cat.bits { background: color-mix(in srgb, #5aa9e6 22%, transparent); color: #5aa9e6; }
+  .cat.tips { background: color-mix(in srgb, var(--ok) 20%, transparent); color: var(--ok); }
+  .cat.raids { background: color-mix(in srgb, var(--warn) 22%, transparent); color: var(--warn); }
+  .cat.receipts { background: color-mix(in srgb, var(--text) 14%, transparent); color: var(--text); }
+  .plat { font-size: 10.5px; font-weight: 700; color: var(--muted); flex: none; }
+  .plat.yt { color: var(--err); }
+  .st { font-size: 11px; font-weight: 700; white-space: nowrap; padding-top: 2px; color: var(--muted); }
+  .st.printed { color: var(--ok); } .st.paused, .st.hype { color: var(--warn); }
+  .new { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex: none; }
+  .pr { font-size: 11px; font-weight: 700; color: var(--ok); white-space: nowrap; padding-top: 2px; }
+  .empty { color: var(--muted); font-style: italic; padding: 18px 14px; }
+
+  .detail { padding: 14px; position: sticky; top: 14px; }
+  .detail-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+  .detail-head .ttl { font-weight: 650; min-width: 0; flex: 1 1 auto; overflow-wrap: anywhere; }
+  .detail-head .sub { color: var(--muted); font-size: 12px; width: 100%; }
+  .slipbox { container-type: inline-size; display: flex; justify-content: center; }
+  .receipt { background: var(--paper); color: var(--ink); border-radius: 2px; padding: 14px 10px 18px; margin: 0;
+             font: 13px/1.38 ui-monospace, "Cascadia Mono", Consolas, monospace; white-space: pre;
+             font-size: min(13px, calc((100cqw - 20px) / 29.2)); overflow-x: auto;
+             max-height: calc(100vh - 230px); overflow-y: auto; }
+  .keys { color: var(--muted); font-size: 12px; margin-top: 10px; text-align: center; }
+  kbd { font: 600 11px ui-monospace, Consolas, monospace; border: 1px solid var(--line); border-bottom-width: 2px;
+        border-radius: 4px; padding: 0 5px; }
+  @media (hover: none) { .keys { display: none; } }
+  .pick { width: 18px; height: 18px; border-radius: 5px; border: 2px solid var(--muted); flex: none; display: none;
+          align-items: center; justify-content: center; margin-top: 1px; }
+  .selecting .pick { display: inline-flex; }
+  .selecting .item { grid-template-columns: 22px 50px minmax(0, 1fr) auto; }
+  .item.picked .pick { background: var(--accent); border-color: var(--accent); }
+  .item.picked .pick::after { content: ""; width: 5px; height: 9px; border: solid #1d1c19; border-width: 0 2px 2px 0; transform: rotate(45deg) translate(-1px, -1px); }
+  .item.nocount .pick { opacity: .35; }
+  #sumbar { position: sticky; bottom: 0; display: none; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 12px;
+            padding: 10px 14px; background: var(--card); border: 1px solid var(--accent); border-radius: 10px;
+            box-shadow: 0 -4px 18px rgba(0,0,0,.25); }
+  #sumbar.show { display: flex; }
+  #sumbar .n { font-weight: 650; margin-right: auto; }
+  button.act[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #1d1c19; }
+  #toast { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%) translateY(20px);
+           background: var(--text); color: var(--bg); padding: 10px 16px; border-radius: 8px;
+           font-weight: 600; opacity: 0; transition: .2s; pointer-events: none; max-width: calc(100% - 32px); }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  #toast.bad { background: var(--err); color: #fff; }
+  #offline { display: none; margin-bottom: 12px; padding: 10px 12px; border-radius: 8px;
+             background: color-mix(in srgb, var(--err) 16%, transparent); color: var(--err); font-weight: 600; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <a class="back" href="/">&larr; Panel</a>
+    <h1 id="h1">Datalink log</h1>
+    <a class="back" id="other" href="/stream-log" style="font-weight:500">Stream log</a>
+    <span class="flt" id="flt"></span>
+    <span class="mode" id="mode"></span>
+  </header>
+  <div id="offline">Print Desk isn't running. Start it with start.bat.</div>
+
+  <div class="bar">
+    <div class="chips" id="chips" role="group" aria-label="Show"></div>
+    <select id="flight" aria-label="Flight"></select>
+    <input type="search" id="q" placeholder="Search" aria-label="Search">
+    <button class="act" id="seen">Mark all read</button>
+    <button class="act" id="select" aria-pressed="false" style="display:none">Select for a summary</button>
+    <span id="fetchbox" style="display:none;gap:6px;align-items:center">
+      <select id="fetch-h" aria-label="How far back"><option value="24">Last 24 hours</option><option value="72">Last 3 days</option><option value="168">Last 7 days</option><option value="336">Last 14 days</option></select>
+      <button class="act" id="fetch">Fetch missed events</button>
+    </span>
+  </div>
+
+  <div class="split">
+    <section class="card list" id="list" role="listbox" aria-label="Messages"></section>
+    <section class="card detail" id="detail">
+      <div class="empty" style="padding:4px 0">Pick a message to see it here.</div>
+    </section>
+  </div>
+  <div id="sumbar">
+    <span class="n" id="sum-n"></span>
+    <button class="act" id="sum-all">Select all shown</button>
+    <button class="act" id="sum-clear">Clear</button>
+    <button class="act primary" id="sum-print">Print summary</button>
+  </div>
+</main>
+<div id="toast" role="status"></div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const BOOK = location.pathname.startsWith("/stream-log") ? "stream" : "acars";
+const BOOKS = {
+  acars: { title: "Datalink log", other: ["/stream-log", "Stream log"], key: "pd-log",
+           cats: [["cpdlc", "CPDLC"], ["telex", "Telex"], ["weather", "Weather"], ["notice", "Notices"], ["other", "Other"]],
+           of: (e) => ["cpdlc", "telex", "weather", "notice"].includes(e.cat) ? e.cat : "other" },
+  stream: { title: "Stream log", other: ["/log", "Datalink log"], key: "pd-slog",
+            cats: [["subs", "Subs"], ["bits", "Bits"], ["tips", "Tips"], ["raids", "Raids"], ["follows", "Follows"],
+                   ["receipts", "Receipts"], ["unprinted", "Not printed"], ["missed", "While off"]],
+            of: (e) => ({ sub: "subs", resub: "subs", gift: "subs", bits: "bits", tip: "tips", superchat: "tips",
+                          raid: "raids", follow: "follows", follows: "follows", hype: "receipts", away: "receipts" })[e.cat] || "other" },
+}[BOOK];
+const catOf = BOOK_cat;
+function BOOK_cat(e) { return BOOKS.of(e); }
+const PRINTED = ["printed", "hype train", "on pause receipt"];
+const OFF = "while Print Desk was off";
+function inCat(e, c) {
+  if (c === "all") return true;
+  if (c === "missed") return e.status === OFF;
+  if (c === "unprinted") return !!e.status && !PRINTED.includes(e.status) && !e.printed;
+  return catOf(e) === c;
+}
+document.title = BOOKS.title; $("h1").textContent = BOOKS.title;
+$("other").href = BOOKS.other[0]; $("other").textContent = BOOKS.other[1];
+$("chips").innerHTML = [["all", "All"], ...BOOKS.cats].map(([c, l]) =>
+  `<button data-cat="${c}" aria-pressed="${c === "all"}">${l}<span class="c"></span></button>`).join("");
+$("q").placeholder = BOOK === "stream" ? "Search names and messages" : "Search";
+
+let data = { entries: [], current: {} }, cat = "all", flightSel = "current", selected = null, sig = "";
+let selecting = false, lastClick = null;
+const picked = new Set();
+let lastRead = 0;
+try { lastRead = +localStorage.getItem(BOOKS.key + "-read") || 0; } catch (e) {}
+try { cat = localStorage.getItem(BOOKS.key + "-cat") || "all"; } catch (e) {}
+if (![["all"], ...BOOKS.cats].some(([c]) => c === cat)) cat = "all";
+
+function toast(msg, bad) {
+  const t = $("toast"); t.textContent = msg; t.className = bad ? "show bad" : "show";
+  clearTimeout(toast.timer); toast.timer = setTimeout(() => t.className = bad ? "bad" : "", 3000);
+}
+
+const flightKey = (e) => BOOK === "stream" ? (e.platform === "youtube" ? "YouTube" : e.platform === "both" ? "Both" : "Twitch")
+                                           : `${e.callsign || "?"} ${e.route || ""}`.trim();
+const zulu = (ts) => { const d = new Date(ts * 1000); return String(d.getUTCHours()).padStart(2, "0") + String(d.getUTCMinutes()).padStart(2, "0") + "Z"; };
+const clock = (ts) => { const d = new Date(ts * 1000); return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0"); };
+const day = (ts) => new Date(ts * 1000).toLocaleDateString(undefined, { day: "numeric", month: "short" });
+function firstBody(text) {
+  // the slip's message body: the lines after the first rule, minus the END box
+  const lines = text.split("\n").map(l => l.trim());
+  const i = lines.findIndex(l => /^-{10,}$/.test(l));
+  const isBox = (l) => /^-+ ?(ACARS|END) ?-+$/.test(l) || /^-{10,}$/.test(l);
+  // notices have no rule before their text, so fall back to everything inside the box
+  const body = (i >= 0 ? lines.slice(i + 1) : lines).filter(l => l && !isBox(l));
+  return body.map(l => l.replace(/^\[ (.*) \]$/, "$1")).join("  ");
+}
+
+function visible() {
+  const q = $("q").value.trim().toLowerCase();
+  if (BOOK === "stream") {
+    return data.entries.filter(e => inCat(e, cat) &&
+      (flightSel === "current" || flightSel === "all" || flightKey(e) === flightSel || e.platform === "both") &&
+      (!q || e.text.toLowerCase().includes(q) || (e.user || "").toLowerCase().includes(q)));
+  }
+  const cur = data.current.callsign ? `${data.current.callsign} ${data.current.route}` : null;
+  return data.entries.filter(e =>
+    inCat(e, cat) &&
+    (flightSel === "all" || (flightSel === "current" ? (cur ? flightKey(e) === cur : true) : flightKey(e) === flightSel)) &&
+    (!q || e.text.toLowerCase().includes(q) || (e.from || "").toLowerCase().includes(q)));
+}
+
+function renderFlights() {
+  if (BOOK === "stream") {
+    if (!$("flight").options.length) $("flight").innerHTML =
+      '<option value="current">Twitch and YouTube</option><option value="Twitch">Twitch</option><option value="YouTube">YouTube</option>';
+    flightSel = $("flight").value || "current";
+    return;
+  }
+  const keys = [...new Set(data.entries.map(flightKey))];
+  const cur = data.current.callsign ? `${data.current.callsign} ${data.current.route}` : null;
+  const opts = [`<option value="current">${cur ? "This flight (" + esc(cur) + ")" : "Latest entries"}</option>`,
+                `<option value="all">All flights</option>`,
+                ...keys.filter(k => k !== cur).slice(0, 30).map(k => `<option value="${esc(k)}">${esc(k)}</option>`)];
+  const was = flightSel;
+  $("flight").innerHTML = opts.join("");
+  $("flight").value = [...$("flight").options].some(o => o.value === was) ? was : "current";
+  flightSel = $("flight").value;
+}
+
+function render() {
+  const m = $("mode");
+  if (BOOK === "stream") {
+    $("flt").textContent = "";
+    m.textContent = data.paused ? "Paused - collecting" : "Live";
+    m.className = "mode" + (data.paused ? " auto" : "");
+  } else {
+    $("flt").textContent = data.current.callsign ? `${data.current.callsign}  ${data.current.route}` : "No flight active";
+    m.textContent = data.print_mode === "auto" ? "Printing automatically" : "Log only";
+    m.className = "mode" + (data.print_mode === "auto" ? " auto" : "");
+  }
+  renderFlights();
+
+  // counts per category, for the current flight filter
+  const saveCat = cat; const counts = {};
+  for (const [c] of [["all"], ...BOOKS.cats]) { cat = c; counts[c] = visible().length; }
+  cat = saveCat;
+  document.querySelectorAll("#chips button").forEach(b => {
+    b.setAttribute("aria-pressed", String(b.dataset.cat === cat));
+    b.querySelector(".c").textContent = counts[b.dataset.cat] || "";
+    b.style.display = b.dataset.cat !== "all" && !counts[b.dataset.cat] && BOOK === "acars" && b.dataset.cat === "other" ? "none" : "";
+  });
+
+  const rows = visible();
+  if (!rows.length) {
+    $("list").innerHTML = `<div class="empty">${data.entries.length ? "Nothing matches." :
+      BOOK === "stream" ? "Nothing in the log yet. Every sub, bit, tip, raid and follow lands here." :
+      "Nothing in the log yet. Messages appear here once a flight is running."}</div>`;
+  } else {
+    let html = "", group = null;
+    for (const e of rows) {
+      const g = BOOK === "stream" ? day(e.at) : flightSel === "all" ? flightKey(e) + " · " + day(e.at) : null;
+      if (g && g !== group) { group = g; html += `<div class="grp">${esc(g)}</div>`; }
+      const c = catOf(e);
+      if (BOOK === "stream") {
+        const st = e.printed ? (e.printed > 1 ? `printed ×${e.printed}` : "printed") : e.status || "";
+        const stc = e.printed || PRINTED.includes(e.status) ? "printed" : e.status === "paused" || e.status === OFF ? "paused" : "";
+        html += `<div class="item${picked.has(e.n) ? " picked" : ""}${e.countable ? "" : " nocount"}" role="option" data-n="${e.n}" aria-selected="${e.n === selected}">
+          <span class="pick" aria-hidden="true"></span>
+          <span class="t">${clock(e.at)}</span>
+          <div><div class="h">${e.n > lastRead ? '<span class="new" title="New"></span>' : ""}<span class="cat ${c}">${esc(e.cat)}</span>${e.platform === "youtube" ? '<span class="plat yt">YT</span>' : ""}<span class="nm">${esc(e.user || e.title)}</span></div>
+               <div class="b">${esc(e.title)}</div></div>
+          <span class="st ${stc}">${esc(st)}</span>
+        </div>`;
+        continue;
+      }
+      html += `<div class="item${e.old ? " old" : ""}" role="option" data-n="${e.n}" aria-selected="${e.n === selected}">
+        <span class="t">${zulu(e.at)}</span>
+        <div><div class="h">${e.n > lastRead ? '<span class="new" title="New"></span>' : ""}<span class="cat ${c}">${esc(c === "other" ? e.cat : c)}</span><span class="nm">${esc(e.from || e.title)}</span></div>
+             <div class="b">${esc(firstBody(e.text) || e.title)}</div></div>
+        <span class="pr">${e.printed ? (e.printed > 1 ? `printed ×${e.printed}` : "printed") : ""}</span>
+      </div>`;
+    }
+    $("list").innerHTML = html;
+  }
+  renderDetail();
+  renderSum();
+}
+
+function renderSum() {
+  $("list").classList.toggle("selecting", selecting);
+  $("sumbar").classList.toggle("show", selecting);
+  $("select").setAttribute("aria-pressed", String(selecting));
+  $("select").textContent = selecting ? "Done selecting" : "Select for a summary";
+  const rows = data.entries.filter(e => picked.has(e.n));
+  const count = rows.filter(e => e.countable).length;
+  const from = rows.length ? rows[rows.length - 1].at : null, to = rows.length ? rows[0].at : null;
+  $("sum-n").textContent = !rows.length ? "Tick events to add them up. Shift-click picks everything in between." :
+    `${count} event${count === 1 ? "" : "s"} picked` + (from ? ` · ${day(from)} ${clock(from)} - ${day(to) === day(from) ? "" : day(to) + " "}${clock(to)}` : "") +
+    (rows.length > count ? ` · ${rows.length - count} receipt(s) won't count` : "");
+  $("sum-print").disabled = !count;
+}
+
+function renderDetail() {
+  const e = data.entries.find(x => x.n === selected);
+  if (!e) { $("detail").innerHTML = '<div class="empty" style="padding:4px 0">Pick a message to see it here.</div>'; return; }
+  $("detail").innerHTML = `
+    <div class="detail-head">
+      <span class="cat ${catOf(e)}">${esc(BOOK === "stream" ? e.cat : catOf(e) === "other" ? e.cat : catOf(e))}</span>
+      <span class="ttl">${esc(e.title)}</span>
+      <button class="act primary" id="print">${e.printed || e.status === "printed" ? "Print again" : "Print"}</button>
+      <span class="sub">${BOOK === "stream"
+        ? `${esc(day(e.at))} ${clock(e.at)} · ${esc(flightKey(e))} · ${esc(e.status || "")}${e.printed ? ` · printed by hand ${e.printed}×` : ""}`
+        : `${esc(day(e.at))} ${zulu(e.at)} · ${esc(flightKey(e))}${e.old ? " · arrived before the flight started" : ""}${e.printed ? ` · printed ${e.printed}×` : ""}`}</span>
+    </div>
+    <div class="slipbox"><pre class="receipt">${esc(e.text)}</pre></div>
+    <div class="keys"><kbd>↑</kbd> <kbd>↓</kbd> move · <kbd>P</kbd> print</div>`;
+  $("print").onclick = () => printSel();
+}
+
+function select(n, scroll) {
+  selected = n;
+  document.querySelectorAll(".item").forEach(el => el.setAttribute("aria-selected", String(+el.dataset.n === n)));
+  renderDetail();
+  if (scroll) document.querySelector(`.item[data-n="${n}"]`)?.scrollIntoView({ block: "nearest" });
+  if (matchMedia("(max-width: 819px)").matches && !scroll) $("detail").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+async function printSel() {
+  if (selected == null) return;
+  const b = $("print"); if (b) b.disabled = true;
+  try {
+    const r = await fetch(`/api/log/print/${selected}?book=${BOOK}`, { method: "POST" });
+    const d = await r.json(); toast(d.message, !d.ok);
+  } catch (e) { toast("Print Desk isn't responding.", true); }
+  load(true);
+}
+
+async function load(force) {
+  try {
+    const r = await fetch(`/api/log?book=${BOOK}`, { cache: "no-store" });
+    data = await r.json();
+    $("offline").style.display = "none";
+  } catch (e) { $("offline").style.display = "block"; return; }
+  data.current = data.current || {};
+  const s = JSON.stringify([data.entries.map(e => [e.n, e.printed]), data.current, data.print_mode, data.paused]);
+  if (!force && s === sig) return;
+  const newest = data.entries[0]?.n, hadNew = sig && newest && !sig.includes(`[${newest},`);
+  sig = s;
+  // follow the newest message unless you've picked an older one yourself
+  if (selected == null || (hadNew && select.auto)) { selected = visible()[0]?.n ?? null; select.auto = true; }
+  render();
+}
+
+$("list").addEventListener("click", (ev) => {
+  const it = ev.target.closest(".item"); if (!it) return;
+  const n = +it.dataset.n;
+  if (selecting) {
+    const rows = visible().map(e => e.n);
+    if (ev.shiftKey && lastClick != null && rows.includes(lastClick)) {
+      const [a, b] = [rows.indexOf(lastClick), rows.indexOf(n)].sort((x, y) => x - y);
+      rows.slice(a, b + 1).forEach(k => picked.add(k));
+    } else if (picked.has(n)) picked.delete(n); else picked.add(n);
+    lastClick = n;
+    document.querySelectorAll(".item").forEach(el => el.classList.toggle("picked", picked.has(+el.dataset.n)));
+    renderSum();
+    window.getSelection()?.removeAllRanges();
+  }
+  select.auto = false; select(n);
+});
+if (BOOK === "stream") { $("select").style.display = ""; $("fetchbox").style.display = "inline-flex"; }
+$("fetch").onclick = async () => {
+  const b = $("fetch"); b.disabled = true; b.textContent = "Fetching…";
+  try {
+    const r = await fetch("/api/log/fetch", { method: "POST", headers: { "Content-Type": "application/json" },
+                                             body: JSON.stringify({ hours: +$("fetch-h").value }) });
+    const d = await r.json(); toast(d.message, !d.ok);
+  } catch (e) { toast("Print Desk isn't responding.", true); }
+  b.disabled = false; b.textContent = "Fetch missed events"; load(true);
+};
+$("select").onclick = () => { selecting = !selecting; if (!selecting) picked.clear(); render(); };
+$("sum-all").onclick = () => { visible().forEach(e => picked.add(e.n)); render(); };
+$("sum-clear").onclick = () => { picked.clear(); render(); };
+$("sum-print").onclick = async () => {
+  $("sum-print").disabled = true;
+  try {
+    const r = await fetch("/api/log/summary", { method: "POST", headers: { "Content-Type": "application/json" },
+                                               body: JSON.stringify({ ns: [...picked] }) });
+    const d = await r.json(); toast(d.message, !d.ok);
+  } catch (e) { toast("Print Desk isn't responding.", true); }
+  renderSum();
+};
+$("chips").addEventListener("click", (ev) => {
+  const b = ev.target.closest("button"); if (!b) return;
+  cat = b.dataset.cat; try { localStorage.setItem(BOOKS.key + "-cat", cat); } catch (e) {}
+  render();
+});
+$("flight").onchange = () => { flightSel = $("flight").value; render(); };
+$("q").oninput = () => render();
+$("seen").onclick = () => {
+  lastRead = data.entries[0]?.n || 0;
+  try { localStorage.setItem(BOOKS.key + "-read", String(lastRead)); } catch (e) {}
+  render();
+};
+document.addEventListener("keydown", (ev) => {
+  if (ev.target.matches("input, select") || ev.ctrlKey || ev.metaKey || ev.altKey) return;
+  const rows = visible(); const i = rows.findIndex(e => e.n === selected);
+  if (ev.key === "ArrowDown" || ev.key === "ArrowUp") {
+    ev.preventDefault();
+    const j = Math.max(0, Math.min(rows.length - 1, (i < 0 ? 0 : i + (ev.key === "ArrowDown" ? 1 : -1))));
+    if (rows[j]) { select.auto = j === 0; select(rows[j].n, true); }
+  } else if (ev.key === "p" || ev.key === "P") { ev.preventDefault(); printSel(); }
+});
+
+select.auto = true;
+load(true);
+setInterval(load, 3000);
+</script>
+</body>
+</html>

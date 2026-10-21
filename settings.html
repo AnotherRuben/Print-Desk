@@ -1,0 +1,647 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Print Desk settings</title>
+<style>
+  :root {
+    --bg: #15161a; --card: #1e2026; --line: #2d3038; --text: #e8e6e1; --muted: #9a9890;
+    --field: #15161a; --ok: #4cc38a; --warn: #e8a33d; --err: #e5534b; --accent: #e8a33d;
+    --btn: #2a2d35; --btn-hover: #343843;
+  }
+  @media (prefers-color-scheme: light) {
+    :root { --bg: #eceae4; --card: #fbfaf7; --line: #dcd9d0; --text: #1d1c19; --muted: #6b6960;
+            --field: #fff; --btn: #efede7; --btn-hover: #e4e1d9; --accent: #c98a2b; --warn: #a8640c; --ok: #23874f; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 760px; margin: 0 auto; padding: 14px 14px 110px; }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+  h1 { font-size: 17px; margin: 0; font-weight: 600; }
+  a.back { color: var(--muted); text-decoration: none; font-weight: 600; }
+  a.back:hover { color: var(--text); }
+  nav { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+  nav a { color: var(--muted); text-decoration: none; font-size: 13px; font-weight: 600;
+          padding: 5px 10px; border: 1px solid var(--line); border-radius: 999px; }
+  nav a:hover { color: var(--text); border-color: var(--muted); }
+  section.card { background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+                 padding: 16px; margin-bottom: 12px; scroll-margin-top: 12px; }
+  h2 { font-size: 15px; margin: 0 0 4px; font-weight: 650; display: flex; align-items: center; gap: 8px; }
+  .lead { color: var(--muted); margin: 0 0 14px; font-size: 13px; }
+  a { color: var(--accent); }
+  .lead a { color: inherit; }
+  .field { margin-bottom: 12px; }
+  .field:last-child { margin-bottom: 0; }
+  label.l { display: block; font-weight: 600; margin-bottom: 4px; font-size: 13px; }
+  .hint { color: var(--muted); font-size: 12px; margin-top: 4px; }
+  input[type=text], input[type=number], input[type=password], select, textarea {
+    width: 100%; font: inherit; color: var(--text); background: var(--field);
+    border: 1px solid var(--line); border-radius: 7px; padding: 9px 10px; min-height: 40px; }
+  textarea { min-height: 64px; resize: vertical; }
+  input:focus, select:focus, textarea:focus { outline: 2px solid color-mix(in srgb, var(--accent) 60%, transparent); outline-offset: 0; border-color: var(--accent); }
+  .row2 { display: grid; gap: 10px; grid-template-columns: 1fr 1fr; }
+  .row3 { display: grid; gap: 10px; grid-template-columns: 1fr 1fr 1fr; }
+  @media (max-width: 520px) { .row2, .row3 { grid-template-columns: 1fr; } }
+  .check { display: flex; align-items: flex-start; gap: 10px; padding: 6px 0; cursor: pointer; }
+  .check input { width: 18px; height: 18px; margin: 1px 0 0; accent-color: var(--accent); flex: none; }
+  .check span small { display: block; color: var(--muted); font-size: 12px; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  .seg label { padding: 8px 14px; cursor: pointer; font-weight: 600; font-size: 13px; color: var(--muted); }
+  .seg label { position: relative; }
+  .seg input { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
+  .seg label:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .seg label:has(input:checked) { background: var(--btn); color: var(--text); }
+  button { font: inherit; font-weight: 600; color: var(--text); background: var(--btn);
+           border: 1px solid var(--line); border-radius: 7px; padding: 8px 12px; cursor: pointer; min-height: 38px; }
+  button:hover { background: var(--btn-hover); }
+  button:disabled { opacity: .5; cursor: default; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #1d1c19; }
+  .inline { display: flex; gap: 8px; align-items: stretch; }
+  .inline > input, .inline > select { flex: 1; min-width: 0; }
+  .pill { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
+  .pill.ok { background: color-mix(in srgb, var(--ok) 18%, transparent); color: var(--ok); }
+  .pill.off { background: color-mix(in srgb, var(--muted) 18%, transparent); color: var(--muted); }
+  .pill.warn { background: color-mix(in srgb, var(--warn) 18%, transparent); color: var(--warn); }
+  .results { margin-top: 10px; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  .results:empty { display: none; }
+  .res { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-bottom: 1px solid var(--line); }
+  .res:last-child { border-bottom: 0; }
+  .res .info { flex: 1; min-width: 0; }
+  .res .info b { font-family: ui-monospace, Consolas, monospace; }
+  .res .info small { display: block; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .res.chosen { background: color-mix(in srgb, var(--accent) 10%, transparent); }
+  .res .msg { color: var(--muted); padding: 10px; }
+  .notice { padding: 10px 12px; border-radius: 8px; font-size: 13px; margin-top: 10px;
+            background: color-mix(in srgb, var(--warn) 12%, transparent);
+            border: 1px solid color-mix(in srgb, var(--warn) 35%, transparent); }
+  .login-box { padding: 12px; border: 1px dashed var(--line); border-radius: 8px; margin-top: 8px; }
+  .code { font: 700 22px ui-monospace, Consolas, monospace; letter-spacing: .12em; }
+  table.tips { width: 100%; border-collapse: collapse; }
+  table.tips td { padding: 3px 4px 3px 0; }
+  table.tips input { min-height: 34px; padding: 6px 8px; }
+  table.tips td:last-child { width: 40px; }
+  .x { min-height: 34px; padding: 0 10px; color: var(--muted); }
+  .savebar { position: fixed; left: 0; right: 0; bottom: 0; background: var(--card);
+             border-top: 1px solid var(--line); padding: 10px 14px; }
+  .savebar .in { max-width: 760px; margin: 0 auto; display: flex; align-items: center; gap: 12px; }
+  .savebar .status { flex: 1; color: var(--muted); font-size: 13px; min-width: 0; }
+  .savebar .status.dirty { color: var(--warn); font-weight: 600; }
+  .savebar .status.bad { color: var(--err); font-weight: 600; }
+  .savebar .status.good { color: var(--ok); font-weight: 600; }
+  .savebar button { min-height: 42px; padding: 8px 22px; }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Settings</h1>
+    <a class="back" href="/">&larr; Back to panel</a>
+  </header>
+  <nav>
+    <a href="#s-output">Output</a><a href="#s-printer">Printer</a><a href="#s-pushover">Pushover</a>
+    <a href="#s-twitch">Twitch</a><a href="#s-avatars">Pictures</a><a href="#s-se">StreamElements</a><a href="#s-simbrief">SimBrief</a><a href="#s-hoppie">Datalink</a><a href="#s-arrival">Weather</a>
+    <a href="#s-rules">What prints</a><a href="#s-text">Texts</a><a href="#s-panel">Panel</a>
+  </nav>
+
+  <form id="form" autocomplete="off" onsubmit="return false">
+
+  <section class="card" id="s-output">
+    <h2>Output</h2>
+    <p class="lead">Where slips go. You can pick more than one.</p>
+    <label class="check"><input type="checkbox" name="out" value="printer"><span>Thermal printer<small>Set it up below</small></span></label>
+    <label class="check"><input type="checkbox" name="out" value="pushover"><span>Pushover<small>To your phone, handy for testing</small></span></label>
+    <label class="check"><input type="checkbox" name="out" value="console"><span>Console<small>Only in the black Print Desk window</small></span></label>
+    <div class="field" style="margin-top:10px">
+      <label class="l" for="general.channel_title">Name at the top of slips</label>
+      <input type="text" id="general.channel_title">
+    </div>
+  </section>
+
+  <section class="card" id="s-printer">
+    <h2>Printer</h2>
+    <p class="lead">A receipt printer with ESC/POS (most 58/80mm printers).</p>
+    <div class="field">
+      <div class="seg" role="radiogroup" aria-label="Connection">
+        <label><input type="radio" name="conn" value="network">Network</label>
+        <label><input type="radio" name="conn" value="usb">USB</label>
+      </div>
+    </div>
+
+    <div id="net-box">
+      <div class="field">
+        <label class="l" for="printer.host">IP address</label>
+        <div class="inline">
+          <input type="text" id="printer.host" placeholder="192.168.1.50" inputmode="decimal">
+          <input type="number" id="printer.port" style="max-width:96px" aria-label="Port">
+          <button type="button" id="scan">Scan network</button>
+        </div>
+        <div class="hint">Scanning lists every device that accepts print jobs. Use <b>Test</b> to see which one is your receipt printer.</div>
+        <div id="scan-results" class="results"></div>
+      </div>
+    </div>
+
+    <div id="usb-box" class="hidden">
+      <div class="field">
+        <label class="l" for="printer.usb_name">Printer installed in Windows</label>
+        <div class="inline">
+          <select id="printer.usb_name"></select>
+          <button type="button" id="usb-refresh">Refresh</button>
+          <button type="button" id="usb-test">Test</button>
+        </div>
+        <div class="hint">Install the printer's Windows driver first. Print Desk sends straight through it, so the Fenix can use the same printer.</div>
+      </div>
+    </div>
+
+    <div class="row3" style="margin-top:12px">
+      <div class="field"><label class="l" for="printer.width">Characters per line</label><input type="number" id="printer.width"><div class="hint">48 for 80mm, 32 for 58mm</div></div>
+      <div class="field"><label class="l" for="printer.feed_lines">Blank lines before cut</label><input type="number" id="printer.feed_lines"></div>
+      <div class="field"><label class="l">&nbsp;</label><label class="check"><input type="checkbox" id="printer.cut"><span>Cut after each slip</span></label></div>
+    </div>
+  </section>
+
+  <section class="card" id="s-pushover">
+    <h2>Pushover</h2>
+    <p class="lead">From <a href="https://pushover.net" target="_blank" rel="noopener">pushover.net</a>: your user key, and an app called "Print Desk" for the API token.</p>
+    <div class="row2">
+      <div class="field"><label class="l" for="pushover.user_key">User key</label><input type="password" id="pushover.user_key"></div>
+      <div class="field"><label class="l" for="pushover.app_token">API token</label><input type="password" id="pushover.app_token"></div>
+    </div>
+    <div class="row3">
+      <div class="field"><label class="l" for="pushover.width">Line width</label><input type="number" id="pushover.width"><div class="hint">Lower it if lines wrap on your phone</div></div>
+      <div class="field"><label class="l" for="pushover.sound">Sound</label><input type="text" id="pushover.sound"></div>
+      <div class="field"><label class="l" for="pushover.device">Only this device</label><input type="text" id="pushover.device" placeholder="all devices"></div>
+    </div>
+  </section>
+
+  <section class="card" id="s-twitch">
+    <h2>Twitch <span id="tw-pill" class="pill off"></span></h2>
+    <p class="lead">Subs, gift subs, bits, raids and hype trains.</p>
+    <label class="check"><input type="checkbox" id="twitch.enabled"><span>Listen to Twitch</span></label>
+    <div class="field">
+      <label class="l" for="twitch.client_id">Client ID</label>
+      <input type="text" id="twitch.client_id" spellcheck="false">
+      <div class="hint">Register an app on <a href="https://dev.twitch.tv/console/apps" target="_blank" rel="noopener">dev.twitch.tv</a> with redirect URL <code>http://localhost</code> and Client Type <b>Public</b>.</div>
+    </div>
+    <div class="field">
+      <div class="inline" style="align-items:center">
+        <span id="tw-account" style="flex:1"></span>
+        <button type="button" id="tw-login" class="primary">Log in with Twitch</button>
+        <button type="button" id="tw-logout" class="hidden">Log out</button>
+      </div>
+      <div id="tw-box" class="login-box hidden"></div>
+    </div>
+  </section>
+
+  <section class="card" id="s-avatars">
+    <h2>Profile pictures</h2>
+    <p class="lead">The viewer's Twitch picture on their slip, in black and white on the printer and in colour in Pushover.</p>
+    <label class="check"><input type="checkbox" id="avatars.enabled"><span>Print profile pictures</span></label>
+    <label class="check"><input type="checkbox" id="avatars.emotes"><span>Emotes in viewer messages<small>Resub and bits messages; Pushover shows the emote names</small></span></label>
+    <div class="row2" style="margin-top:6px">
+      <div class="field"><label class="l" for="avatars.size">Size on paper</label>
+        <select id="avatars.size"><option value="small">Small (2 cm)</option><option value="medium">Medium (3.2 cm)</option><option value="large">Large (4.4 cm)</option></select></div>
+      <div class="field"><label class="l" for="avatars.style">Picture style</label>
+        <select id="avatars.style">
+          <option value="photo">Photo - smooth tones, best for faces</option>
+          <option value="crisp">Crisp - cleaner light areas, more contrast</option>
+          <option value="halftone">Halftone - newspaper-style dots</option>
+          <option value="classic">Classic - the first version</option>
+        </select></div>
+    </div>
+    <label class="check"><input type="checkbox" id="avatars.lighten_dark"><span>Lighten very dark pictures<small>Prints faster and cleaner, looks less like the original</small></span></label>
+    <div class="field">
+      <label class="l">On these slips</label>
+      <div class="row3">
+        <label class="check"><input type="checkbox" name="avev" value="sub"><span>New subs</span></label>
+        <label class="check"><input type="checkbox" name="avev" value="resub"><span>Resubs</span></label>
+        <label class="check"><input type="checkbox" name="avev" value="gift"><span>Gift subs<small>The gifter</small></span></label>
+        <label class="check"><input type="checkbox" name="avev" value="bits"><span>Bits</span></label>
+        <label class="check"><input type="checkbox" name="avev" value="tip"><span>Tips<small>When the name is a Twitch account</small></span></label>
+        <label class="check"><input type="checkbox" name="avev" value="raid"><span>Raids<small>The raiding channel</small></span></label>
+        <label class="check"><input type="checkbox" name="avev" value="follow"><span>Follows</span></label>
+      </div>
+      <div class="hint">Never on the hype train receipt or the gift recipient list. Twitch's default picture is skipped.</div>
+    </div>
+    <div class="field" style="margin-top:6px">
+      <label class="l" for="pic-names">Try real pictures</label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <input type="text" id="pic-names" placeholder="Twitch names, e.g. your own and a friend's" style="flex:1 1 220px;min-width:0" aria-describedby="pic-hint">
+        <button type="button" id="pic-go">Print picture test</button>
+        <button type="button" id="pic-cmp">Compare all styles</button>
+      </div>
+      <div class="hint" id="pic-hint">Prints their real profile pictures with the settings above (save first), or every style on one slip to choose from. Up to 5 names.</div>
+    </div>
+  </section>
+
+  <section class="card" id="s-se">
+    <h2>StreamElements</h2>
+    <p class="lead">Tips on your Twitch channel. Dashboard &gt; your avatar &gt; your channel &gt; JWT token.</p>
+    <label class="check"><input type="checkbox" id="streamelements.enabled"><span>Listen to StreamElements tips</span></label>
+    <div class="field"><label class="l" for="streamelements.jwt">JWT token</label><input type="password" id="streamelements.jwt"></div>
+  </section>
+
+  <section class="card" id="s-youtube">
+    <h2>YouTube</h2>
+    <p class="lead">Through StreamElements: link your YouTube channel there, switch to that channel in the dashboard, then copy <em>its</em> JWT token (avatar &gt; your channel &gt; JWT token). It's a different token from your Twitch one. Only public livestreams send events.</p>
+    <label class="check"><input type="checkbox" id="youtube.enabled"><span>Listen to YouTube<small>Members print like subs, gifted memberships like gift subs, Super Chats and Super Stickers like tips (same minimums). </small></span></label>
+    <label class="check"><input type="checkbox" id="youtube.print_subscribers"><span>Print new subscribers<small>Separate from Twitch follows. A flood goes on one list, like follows. YouTube only reports people whose subscriptions are public, so some subscribers never show up.</small></span></label>
+    <div class="row2" style="margin-top:6px">
+      <div class="field"><label class="l" for="youtube.jwt">JWT token (YouTube channel)</label><input type="password" id="youtube.jwt"></div>
+      <div class="field"><label class="l" for="youtube.currency">Super Chat currency if unknown</label><input type="text" id="youtube.currency" maxlength="3" style="max-width:96px;text-transform:uppercase"></div>
+    </div>
+  </section>
+
+  <section class="card" id="s-simbrief">
+    <h2>SimBrief</h2>
+    <p class="lead">For the Print OFP button.</p>
+    <div class="field"><label class="l" for="simbrief.username">SimBrief username</label><input type="text" id="simbrief.username" spellcheck="false"></div>
+    <div class="field">
+      <label class="l" for="simbrief.print_format">Format to print</label>
+      <div class="inline">
+        <input type="text" id="simbrief.print_format" list="sb-formats">
+        <button type="button" id="sb-load">Load from my last OFP</button>
+      </div>
+      <datalist id="sb-formats"></datalist>
+      <div class="hint" id="sb-hint">The name of one of the downloads in your OFP.</div>
+    </div>
+    <div class="row2">
+      <div class="field"><label class="l" for="simbrief.cut_at">Stop printing at the line</label><input type="text" id="simbrief.cut_at"></div>
+      <div class="field"><label class="l" for="simbrief.size">Text size</label>
+        <select id="simbrief.size"><option value="double_width">Wide (fills the paper)</option><option value="normal">Normal (narrow strip)</option></select></div>
+    </div>
+  </section>
+
+  <section class="card" id="s-hoppie">
+    <h2>Datalink (Hoppie)</h2>
+    <p class="lead">Read-only: Print Desk reads the messages sent to your callsign and checks whether the departure station is logged on. It never sends anything, and your aircraft still receives everything. Only runs during an active flight.</p>
+    <label class="check"><input type="checkbox" id="hoppie.enabled"><span>Use datalink during flights</span></label>
+    <div class="field" style="margin-top:6px"><label class="l" for="hoppie.logon">Hoppie logon code</label><input type="password" id="hoppie.logon">
+      <div class="hint">The same code you entered in your aircraft. Get one on <a href="https://www.hoppie.nl/acars/system" target="_blank" rel="noopener">hoppie.nl</a>.</div></div>
+    <div class="field">
+      <label class="l" for="hoppie.print_mode">When something arrives</label>
+      <select id="hoppie.print_mode"><option value="log">Only put it in the log (print from the log page)</option><option value="auto">Print it automatically</option></select>
+      <div class="hint">Covers datalink messages and the "no reply" and "datalink N/A" notices. Handy with the Fenix, which prints by itself. The weather has its own switches under Weather.</div>
+    </div>
+    <div class="field">
+      <label class="l">With automatic printing, print these</label>
+      <div class="row3">
+        <label class="check"><input type="checkbox" name="hpap" value="cpdlc"><span>CPDLC<small>Clearances, climb, direct-to</small></span></label>
+        <label class="check"><input type="checkbox" name="hpap" value="telex"><span>Telex<small>PDCs and free text</small></span></label>
+        <label class="check"><input type="checkbox" name="hpap" value="progress"><span>Progress</span></label>
+        <label class="check"><input type="checkbox" name="hpap" value="position"><span>Position</span></label>
+      </div>
+      <div class="hint">Everything is kept in the log either way, and can be printed from there.</div>
+    </div>
+    <label class="check"><input type="checkbox" id="hoppie.warn_unavailable"><span>Warn when the departure station isn't logged on<small>Adds "DATALINK N/A - REVERT TO VOICE" once, as soon as your aircraft is on Hoppie</small></span></label>
+    <div class="row2" style="margin-top:6px">
+      <div class="field"><label class="l" for="hoppie.warn_after_seconds">Orange light after (seconds)</label><input type="number" id="hoppie.warn_after_seconds"></div>
+      <div class="field"><label class="l" for="hoppie.timeout_minutes">"No reply" after (minutes)</label><input type="number" id="hoppie.timeout_minutes"></div>
+    </div>
+  </section>
+
+  <section class="card" id="s-arrival">
+    <h2>Weather</h2>
+    <p class="lead">Departure and arrival ATIS from VATSIM, or the METAR when no ATIS is online. Uses your position on VATSIM.</p>
+    <div class="field"><label class="l" for="vatsim.cid">VATSIM CID</label><input type="text" id="vatsim.cid" inputmode="numeric" maxlength="10" style="max-width:160px" aria-describedby="cid-hint">
+      <div class="hint" id="cid-hint">Optional. With it, Print Desk finds you on VATSIM whatever callsign you connect with (weather and auto-pause). Without it, it looks for the callsign from your SimBrief plan.</div></div>
+    <div class="row2">
+      <div class="field"><label class="l" for="departure.mode">Departure weather</label>
+        <select id="departure.mode"><option value="connect">When I connect to VATSIM at the gate</option><option value="start">When the flight starts</option><option value="off">Off</option></select></div>
+      <div class="field"><label class="l" for="departure.prefer">What to print</label>
+        <select id="departure.prefer"><option value="atis">ATIS (METAR if no ATIS online)</option><option value="metar">Always METAR</option></select></div>
+    </div>
+    <label class="check"><input type="checkbox" id="departure.print"><span>Print the departure weather automatically<small>Off: only in the datalink log, print it from there</small></span></label>
+    <label class="check"><input type="checkbox" id="arrival.enabled"><span>Get the arrival weather when within range</span></label>
+    <div class="row2" style="margin-top:6px">
+      <div class="field"><label class="l" for="arrival.distance_nm">Distance (NM)</label><input type="number" id="arrival.distance_nm"></div>
+      <div class="field"><label class="l" for="arrival.prefer">What to print</label>
+        <select id="arrival.prefer"><option value="atis">ATIS (METAR if no ATIS online)</option><option value="metar">Always METAR</option></select></div>
+    </div>
+    <label class="check"><input type="checkbox" id="arrival.print"><span>Print the arrival weather automatically<small>Off: only in the datalink log, print it from there</small></span></label>
+  </section>
+
+  <section class="card" id="s-autopause">
+    <h2>Auto-pause in busy flight phases</h2>
+    <p class="lead">Switched on and off on the main page. During a flight, stream printing pauses from taxi until you climb through the altitude below, and again from 500 ft under it until you're parked, with one receipt each time it resumes. Uses your position on VATSIM, every 15 seconds. Press Pause yourself for pushback; it takes that over at taxi.</p>
+    <div class="row3">
+      <div class="field"><label class="l" for="autopause.altitude_ft">Altitude (ft)</label><input type="number" id="autopause.altitude_ft"></div>
+      <div class="field"><label class="l" for="autopause.taxi_kts">Taxi from (knots)</label><input type="number" id="autopause.taxi_kts"><div class="hint">Pushback is usually slower</div></div>
+      <div class="field"><label class="l" for="autopause.parked_seconds">Parked after standing still (s)</label><input type="number" id="autopause.parked_seconds"></div>
+    </div>
+  </section>
+
+  <section class="card" id="s-rules">
+    <h2>What prints</h2>
+    <div class="row2">
+      <div class="field"><label class="l" for="rules.min_bits">Minimum bits</label><input type="number" id="rules.min_bits"></div>
+      <div class="field"><label class="l" for="rules.min_raid_viewers">Minimum raid size</label><input type="number" id="rules.min_raid_viewers"></div>
+    </div>
+    <label class="check"><input type="checkbox" id="rules.print_follows"><span>Print new followers<small>Off by default. Needs the Twitch login done once more (Settings &gt; Twitch &gt; Log in again). Someone who refollows isn't printed twice.</small></span></label>
+    <div class="field" style="margin:4px 0 8px 28px"><label class="l" for="rules.follow_burst_limit">Follow floods: more than this per minute go on one list</label><input type="number" id="rules.follow_burst_limit" style="max-width:120px"></div>
+    <label class="check"><input type="checkbox" id="rules.raid_follow_lists"><span>After a raid, list the follows<small>Follows in the minutes after a raid go on one list instead of separate slips, even with new followers switched off. A second list prints only if more came in.</small></span></label>
+    <div class="row2" style="margin:4px 0 8px 28px">
+      <div class="field"><label class="l" for="rules.raid_follow_first_minutes">First list after (min)</label><input type="number" step="any" id="rules.raid_follow_first_minutes" style="max-width:120px"></div>
+      <div class="field"><label class="l" for="rules.raid_follow_second_minutes">Second list after (min)</label><input type="number" step="any" id="rules.raid_follow_second_minutes" style="max-width:120px"></div>
+    </div>
+    <label class="check"><input type="checkbox" id="rules.bundle_hype_train"><span>Bundle hype trains into one receipt<small>Everything during the train prints together when it ends</small></span></label>
+    <label class="check"><input type="checkbox" id="rules.hype_train_start_slip"><span>Small slip when a hype train starts</span></label>
+    <div class="field" style="margin-top:8px">
+      <label class="l">Minimum tip per currency</label>
+      <table class="tips"><tbody id="tips"></tbody></table>
+      <button type="button" id="tip-add" style="margin-top:6px">Add currency</button>
+    </div>
+    <div class="field">
+      <label class="l" for="rules.tip_unknown_currency">Tips in other currencies</label>
+      <select id="rules.tip_unknown_currency"><option value="skip">Don't print</option><option value="print">Always print</option></select>
+    </div>
+    <details>
+      <summary style="cursor:pointer;color:var(--muted);font-weight:600;margin:6px 0 10px">Timing</summary>
+      <div class="row3">
+        <div class="field"><label class="l" for="rules.gift_collect_seconds">Gift sub wait (s)</label><input type="number" id="rules.gift_collect_seconds"><div class="hint">Wait for more recipients</div></div>
+        <div class="field"><label class="l" for="rules.gift_collect_max_seconds">Max wait (s)</label><input type="number" id="rules.gift_collect_max_seconds"></div>
+        <div class="field"><label class="l" for="rules.hype_train_safety_minutes">Hype train safety (min)</label><input type="number" id="rules.hype_train_safety_minutes"><div class="hint">Print anyway if the end never comes</div></div>
+      </div>
+    </details>
+  </section>
+
+  <section class="card" id="s-text">
+    <h2>Texts</h2>
+    <p class="lead">Footer lines on the slips. One per line; with several, one is picked at random.</p>
+    <div class="row2">
+      <div class="field"><label class="l" for="text.sub_footer">Subs</label><textarea id="text.sub_footer"></textarea></div>
+      <div class="field"><label class="l" for="text.gift_footer">Gift subs</label><textarea id="text.gift_footer"></textarea></div>
+      <div class="field"><label class="l" for="text.bits_footer">Bits</label><textarea id="text.bits_footer"></textarea></div>
+      <div class="field"><label class="l" for="text.tip_footer">Tips</label><textarea id="text.tip_footer"></textarea></div>
+      <div class="field"><label class="l" for="text.raid_footer">Raids</label><textarea id="text.raid_footer"></textarea></div>
+      <div class="field"><label class="l" for="text.follow_footer">Follows</label><textarea id="text.follow_footer"></textarea></div>
+      <div class="field"><label class="l" for="text.away_footer">Pause receipt</label><textarea id="text.away_footer"></textarea></div>
+      <div class="field"><label class="l" for="text.summary_footer">Summary from the log</label><textarea id="text.summary_footer"></textarea></div>
+      <div class="field"><label class="l" for="text.hype_footer">Hype train (all lines print)</label><textarea id="text.hype_footer"></textarea></div>
+    </div>
+  </section>
+
+  <section class="card" id="s-panel">
+    <h2>Panel</h2>
+    <p class="lead">Changes here apply after restarting Print Desk.</p>
+    <div class="row2">
+      <div class="field"><label class="l" for="panel.host">Reachable from</label>
+        <select id="panel.host"><option value="0.0.0.0">This PC and my home network (phone)</option><option value="127.0.0.1">This PC only</option></select></div>
+      <div class="field"><label class="l" for="panel.port">Port</label><input type="number" id="panel.port"></div>
+    </div>
+  </section>
+  </form>
+</main>
+
+<div class="savebar"><div class="in">
+  <span id="status" class="status">Loading…</span>
+  <button type="button" id="save" class="primary" disabled>Save</button>
+</div></div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+let cfg = null, dirty = false;
+
+const FIELDS = [...document.querySelectorAll("input[id*='.'], select[id*='.'], textarea[id*='.']")];
+
+function setStatus(text, cls) { const s = $("status"); s.textContent = text; s.className = "status " + (cls || ""); }
+function markDirty() { dirty = true; $("save").disabled = false; setStatus("Unsaved changes", "dirty"); }
+
+async function api(path, opts = {}) {
+  const r = await fetch(path, { headers: { "Content-Type": "application/json" }, ...opts,
+                                body: opts.body ? JSON.stringify(opts.body) : undefined });
+  const d = await r.json().catch(() => ({ ok: false, message: "No response from Print Desk" }));
+  if (r.ok === false && d.ok !== false) d.ok = false;
+  return d;
+}
+
+function fill(c) {
+  cfg = c;
+  for (const el of FIELDS) {
+    const [sec, key] = el.id.split(".");
+    const v = c[sec]?.[key];
+    if (el.type === "checkbox") el.checked = !!v;
+    else if (el.tagName === "TEXTAREA") el.value = (v || []).join("\n");
+    else if (el.type === "password") {
+      el.value = "";
+      el.placeholder = c._secrets[el.id] ? "Saved - leave empty to keep" : "Not set";
+    } else el.value = v ?? "";
+  }
+  const outs = (c.general.output || "").split(",").map(s => s.trim());
+  document.querySelectorAll("input[name=out]").forEach(b => b.checked = outs.includes(b.value));
+  document.querySelectorAll("input[name=conn]").forEach(r => r.checked = r.value === (c.printer.connection || "network"));
+  const ap = c.hoppie?.auto_print || [];
+  document.querySelectorAll("input[name=hpap]").forEach(b => b.checked = ap.includes(b.value));
+  const ev = c.avatars?.events || [];
+  document.querySelectorAll("input[name=avev]").forEach(b => b.checked = ev.includes(b.value));
+  showConn();
+  ensureUsbOption(c.printer.usb_name);
+  renderTips(c.rules.tip_minimums || {});
+  dirty = false; $("save").disabled = true;
+}
+
+function collect() {
+  const out = {};
+  for (const el of FIELDS) {
+    const [sec, key] = el.id.split(".");
+    out[sec] ??= {};
+    if (el.type === "checkbox") out[sec][key] = el.checked;
+    else if (el.tagName === "TEXTAREA") out[sec][key] = el.value.split("\n").map(s => s.trim()).filter(Boolean);
+    else out[sec][key] = el.value;
+  }
+  out.general.output = [...document.querySelectorAll("input[name=out]:checked")].map(b => b.value).join(",");
+  out.printer.connection = document.querySelector("input[name=conn]:checked")?.value || "network";
+  out.hoppie.auto_print = [...document.querySelectorAll("input[name=hpap]:checked")].map(b => b.value);
+  out.avatars.events = [...document.querySelectorAll("input[name=avev]:checked")].map(b => b.value);
+  const tips = {};
+  document.querySelectorAll("#tips tr").forEach(tr => {
+    const [c, a] = tr.querySelectorAll("input");
+    if (c.value.trim()) tips[c.value.trim().toUpperCase()] = a.value;
+  });
+  out.rules.tip_minimums = tips;
+  return out;
+}
+
+function validate(data) {
+  if (!data.general.output) return "Pick at least one output.";
+  if (data.general.output.includes("printer")) {
+    if (data.printer.connection === "network" && !data.printer.host.trim()) return "Enter the printer's IP address, or scan for it.";
+    if (data.printer.connection === "usb" && !data.printer.usb_name) return "Choose the USB printer.";
+  }
+  for (const [k, v] of Object.entries(data.rules.tip_minimums)) if (v === "" || isNaN(+v)) return `Tip minimum for ${k} needs a number.`;
+  return null;
+}
+
+async function save() {
+  const data = collect();
+  const problem = validate(data);
+  if (problem) return setStatus(problem, "bad");
+  $("save").disabled = true; setStatus("Saving…");
+  const d = await api("/api/config", { method: "POST", body: data });
+  if (!d.ok) { $("save").disabled = false; return setStatus(d.message, "bad"); }
+  fill(d.config);
+  setStatus(d.message, "good");
+  loadTwitch();
+}
+
+// ---------- printer
+function showConn() {
+  const usb = document.querySelector("input[name=conn]:checked")?.value === "usb";
+  $("net-box").classList.toggle("hidden", usb);
+  $("usb-box").classList.toggle("hidden", !usb);
+  if (usb && !$("printer.usb_name").dataset.loaded) loadUsb();
+}
+
+function ensureUsbOption(name) {
+  const sel = $("printer.usb_name");
+  if (name && ![...sel.options].some(o => o.value === name)) sel.add(new Option(name, name));
+  sel.value = name || "";
+}
+
+async function loadUsb() {
+  const sel = $("printer.usb_name"), keep = sel.value || cfg?.printer.usb_name || "";
+  sel.innerHTML = "<option value=''>Loading…</option>";
+  const d = await api("/api/printers/local");
+  sel.innerHTML = "<option value=''>Choose a printer</option>";
+  if (!d.ok) { sel.innerHTML = `<option value=''>${esc(d.message)}</option>`; ensureUsbOption(keep); return; }
+  d.printers.forEach(n => sel.add(new Option(n + (n === d.default ? "  (Windows default)" : ""), n)));
+  ensureUsbOption(keep);
+  sel.dataset.loaded = "1";
+}
+
+async function testPrinter(body, btn) {
+  btn.disabled = true; const t = btn.textContent; btn.textContent = "Sending…";
+  const d = await api("/api/printers/test", { method: "POST", body });
+  btn.disabled = false; btn.textContent = t;
+  setStatus(d.message, d.ok ? "good" : "bad");
+}
+
+async function scan() {
+  const box = $("scan-results"), btn = $("scan");
+  btn.disabled = true; btn.textContent = "Scanning…";
+  box.innerHTML = '<div class="msg res">Looking for printers on your network (a few seconds)…</div>';
+  const d = await api("/api/printers/scan", { method: "POST", body: { port: +$("printer.port").value || 9100 } });
+  btn.disabled = false; btn.textContent = "Scan network";
+  if (!d.ok) { box.innerHTML = `<div class="res msg">${esc(d.message)}</div>`; return; }
+  if (!d.printers.length) { box.innerHTML = `<div class="res msg">Nothing found on ${esc(d.subnet)}. Is the printer on and connected?</div>`; return; }
+  box.innerHTML = d.printers.map((p, i) => `
+    <div class="res" data-host="${esc(p.host)}">
+      <div class="info"><b>${esc(p.host)}</b><small>${esc([p.title, p.hostname].filter(Boolean).join(" · ") || "No name found")}</small></div>
+      <button type="button" data-test="${i}">Test</button>
+      <button type="button" data-use="${i}">Use</button>
+    </div>`).join("") + (d.printers.length > 1 ? '<div class="res msg">Office printers show up here too. Sending a test to one of those can print a page of gibberish.</div>' : "");
+  box.querySelectorAll("[data-test]").forEach(b => b.onclick = () => {
+    const p = d.printers[b.dataset.test];
+    testPrinter({ connection: "network", host: p.host, port: p.port }, b);
+  });
+  box.querySelectorAll("[data-use]").forEach(b => b.onclick = () => {
+    const p = d.printers[b.dataset.use];
+    $("printer.host").value = p.host; $("printer.port").value = p.port;
+    box.querySelectorAll(".res").forEach(r => r.classList.toggle("chosen", r.dataset.host === p.host));
+    markDirty();
+  });
+}
+
+// ---------- tips table
+function renderTips(t) {
+  $("tips").innerHTML = "";
+  Object.entries(t).forEach(([c, a]) => addTip(c, a));
+}
+function addTip(c = "", a = "") {
+  const tr = document.createElement("tr");
+  tr.innerHTML = `<td><input type="text" maxlength="3" value="${esc(c)}" aria-label="Currency" placeholder="EUR"></td>
+                  <td><input type="number" step="any" value="${esc(a)}" aria-label="Minimum"></td>
+                  <td><button type="button" class="x" aria-label="Remove">&times;</button></td>`;
+  tr.querySelector(".x").onclick = () => { tr.remove(); markDirty(); };
+  $("tips").appendChild(tr);
+  return tr;
+}
+
+// ---------- Twitch login
+let twPoll = null;
+async function loadTwitch() {
+  const d = await api("/api/twitch");
+  const pill = $("tw-pill"), acct = $("tw-account"), box = $("tw-box");
+  const p = d.pending || {};
+  if (d.login) { pill.textContent = "Connected"; pill.className = "pill ok"; acct.textContent = "Logged in as " + d.login; }
+  else if (d.logged_in) { pill.textContent = "Logged in"; pill.className = "pill warn"; acct.textContent = "Logged in, connecting…"; }
+  else { pill.textContent = "Not logged in"; pill.className = "pill off"; acct.textContent = "Not logged in yet."; }
+  $("tw-logout").classList.toggle("hidden", !d.logged_in);
+  $("tw-login").textContent = d.logged_in ? "Log in again" : "Log in with Twitch";
+  $("tw-login").classList.toggle("primary", !d.logged_in);
+
+  if (p.status === "waiting") {
+    box.classList.remove("hidden");
+    box.innerHTML = `Open <a href="${esc(p.uri)}" target="_blank" rel="noopener">${esc(p.uri)}</a> and approve Print Desk.
+      <div style="margin-top:6px">Code: <span class="code">${esc(p.code)}</span></div>
+      <div class="hint">This page updates by itself once you've approved it.</div>`;
+    clearTimeout(twPoll); twPoll = setTimeout(loadTwitch, 2500);
+  } else if (p.status === "error") {
+    box.classList.remove("hidden"); box.innerHTML = `<span style="color:var(--err)">${esc(p.message)}</span>`;
+  } else if (p.status === "done") {
+    box.classList.remove("hidden"); box.innerHTML = `Logged in as <b>${esc(p.login)}</b>.`;
+    if (!d.login) { clearTimeout(twPoll); twPoll = setTimeout(loadTwitch, 2500); }
+  } else box.classList.add("hidden");
+}
+
+$("tw-login").onclick = async () => {
+  const id = $("twitch.client_id").value.trim();
+  if (!id) return setStatus("Enter your Twitch Client ID first.", "bad");
+  $("tw-login").disabled = true;
+  const d = await api("/api/twitch/login", { method: "POST", body: { client_id: id } });
+  $("tw-login").disabled = false;
+  if (!d.ok) return setStatus(d.message, "bad");
+  if (d.uri) window.open(d.uri, "_blank", "noopener");
+  loadTwitch();
+};
+$("tw-logout").onclick = async () => { await api("/api/twitch/logout", { method: "POST" }); loadTwitch(); };
+
+// ---------- SimBrief
+$("sb-load").onclick = async () => {
+  const btn = $("sb-load"); btn.disabled = true;
+  if (dirty) await save();
+  const d = await api("/api/simbrief/downloads");
+  btn.disabled = false;
+  if (!d.ok) return ($("sb-hint").textContent = d.message);
+  $("sb-formats").innerHTML = d.downloads.map(n => `<option value="${esc(n)}">`).join("");
+  $("sb-hint").textContent = `${d.downloads.length} formats found. Click the field to pick one.`;
+  $("simbrief.print_format").focus();
+};
+
+// ---------- wiring
+async function picTest(compare, b) {
+  b.disabled = true;
+  const d = await api("/api/picture-test", { method: "POST", body: { names: $("pic-names").value, compare } });
+  setStatus(dirty && !compare ? d.message + " (unsaved changes aren't used yet)" : d.message, d.ok ? "good" : "bad");
+  b.disabled = false;
+}
+$("pic-go").onclick = (e) => picTest(false, e.currentTarget);
+$("pic-cmp").onclick = (e) => picTest(true, e.currentTarget);
+$("pic-names").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); $("pic-go").click(); } });
+document.getElementById("form").addEventListener("input", markDirty);
+document.getElementById("form").addEventListener("change", markDirty);
+document.querySelectorAll("input[name=conn]").forEach(r => r.addEventListener("change", showConn));
+$("scan").onclick = scan;
+$("usb-refresh").onclick = () => { delete $("printer.usb_name").dataset.loaded; loadUsb(); };
+$("usb-test").onclick = (e) => {
+  const n = $("printer.usb_name").value;
+  if (!n) return setStatus("Choose a printer first.", "bad");
+  testPrinter({ connection: "usb", usb_name: n }, e.currentTarget);
+};
+$("tip-add").onclick = () => { addTip().querySelector("input").focus(); markDirty(); };
+$("save").onclick = save;
+document.addEventListener("keydown", e => { if ((e.ctrlKey || e.metaKey) && e.key === "s") { e.preventDefault(); if (dirty) save(); } });
+window.addEventListener("beforeunload", e => { if (dirty) { e.preventDefault(); e.returnValue = ""; } });
+
+(async () => {
+  const c = await api("/api/config");
+  if (c.ok === false) return setStatus("Print Desk isn't running.", "bad");
+  fill(c); setStatus("All saved.");
+  loadTwitch();
+})();
+</script>
+</body>
+</html>
