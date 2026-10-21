@@ -235,6 +235,12 @@ class Flight:
         listed = t in self.listed_types()
         return not listed if m == "except" else listed
 
+    def _wanted(self, m: dict) -> bool:
+        """Which messages may print by themselves. "pdc" means departure clearances,
+        whether they come as a telex or over CPDLC; "telex" is all other free text too."""
+        kinds = self.cfg.get("auto_print", ["cpdlc", "pdc"])
+        return m["type"] in kinds or ("pdc" in kinds and is_pdc(m))
+
     async def print_soon(self, entry: dict):
         """Like an aircraft's ACARS printer: prints a few seconds after the message comes in."""
         base = float(self.cfg.get("print_delay_seconds", 8))
@@ -314,7 +320,7 @@ class Flight:
             self.app.history("acars", f"{m['type']} from {m['from']} (in the log)")
             if m["from"] == self.station:
                 self._reply_received()
-            if m["type"] in self.cfg.get("auto_print", ["cpdlc", "telex"]) and await self.auto_ok():
+            if self._wanted(m) and await self.auto_ok():
                 await self.print_soon(entry)
         del self.messages[100:]
         self.first_peek = False
