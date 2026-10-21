@@ -379,7 +379,7 @@ class Panel:
         return web.json_response({"book": "acars", "entries": f.log.view(width),
                                   "current": {"callsign": cur.get("callsign"),
                                               "route": f"{cur['origin']}-{cur['destination']}" if cur else None},
-                                  "print_mode": "auto" if f.auto else "log"})
+                                  "print_mode": f.mode})
 
     async def api_log_print(self, request):
         stream = self._book(request) == "stream"

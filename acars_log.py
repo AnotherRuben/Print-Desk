@@ -184,7 +184,7 @@ class SlipLog:
 
     def view(self, width=48, limit=300, fields=()):
         """Newest first, with the slip as text for the screen."""
-        base = ("n", "at", "cat", "title", "printed", "from", "old", "callsign", "route") + tuple(fields)
+        base = ("n", "at", "cat", "title", "printed", "from", "old", "callsign", "route", "pdc") + tuple(fields)
         out = []
         for e in sorted(self.entries[-limit:], key=lambda e: e["at"], reverse=True):
             row = {k: e.get(k) for k in base}

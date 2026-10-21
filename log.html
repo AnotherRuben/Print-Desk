@@ -254,8 +254,9 @@ function render() {
     m.className = "mode" + (data.paused ? " auto" : "");
   } else {
     $("flt").textContent = data.current.callsign ? `${data.current.callsign}  ${data.current.route}` : "No flight active";
-    m.textContent = data.print_mode === "auto" ? "Printing automatically" : "Log only";
-    m.className = "mode" + (data.print_mode === "auto" ? " auto" : "");
+    m.textContent = { log: "Log only", auto: "Printing automatically", except: "Printing, except listed aircraft",
+                      only: "Printing on listed aircraft only" }[data.print_mode] || "";
+    m.className = "mode" + (data.print_mode !== "log" ? " auto" : "");
   }
   renderFlights();
 
@@ -294,7 +295,7 @@ function render() {
       }
       html += `<div class="item${e.old ? " old" : ""}" role="option" data-n="${e.n}" aria-selected="${e.n === selected}">
         <span class="t">${zulu(e.at)}</span>
-        <div><div class="h">${e.n > lastRead ? '<span class="new" title="New"></span>' : ""}<span class="cat ${c}">${esc(c === "other" ? e.cat : c)}</span><span class="nm">${esc(e.from || e.title)}</span></div>
+        <div><div class="h">${e.n > lastRead ? '<span class="new" title="New"></span>' : ""}<span class="cat ${c}">${esc(c === "other" ? e.cat : c)}</span>${e.pdc ? '<span class="cat receipts">PDC</span>' : ""}<span class="nm">${esc(e.from || e.title)}</span></div>
              <div class="b">${esc(firstBody(e.text) || e.title)}</div></div>
         <span class="pr">${e.printed ? (e.printed > 1 ? `printed ×${e.printed}` : "printed") : ""}</span>
       </div>`;
