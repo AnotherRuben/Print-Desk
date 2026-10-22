@@ -10,6 +10,7 @@ import asyncio
 import logging
 import math
 import random
+import re
 import time
 from datetime import datetime, timezone
 
@@ -51,6 +52,28 @@ def zulu(ts: float | None = None) -> str:
 
 def _box(title: str, s: Slip):
     s.center(f" {title} ".center(36, "-"))
+
+
+PDC_WORDS = re.compile(r"\b(PDC|CLD|CLRD TO|CLEARED TO|DEPARTURE CLEARANCE|DEP CLEARANCE)\b")
+
+
+def is_pdc(msg: dict) -> bool:
+    """A departure clearance: a telex PDC, or a CPDLC "CLEARED TO" from the station."""
+    text = decode_cpdlc(msg["packet"])["text"] if msg["type"] == "cpdlc" else msg.get("packet", "")
+    return msg["type"] in ("telex", "cpdlc") and bool(PDC_WORDS.search(text.upper()))
+
+
+def aircraft_type(fp: dict) -> str:
+    """The ICAO type from a VATSIM flight plan ("A20N", from "A20N/M-SDE3FGHIRWY/LB1" or "H/B744/L")."""
+    short = str(fp.get("aircraft_short") or "").strip().upper()
+    if short:
+        return short
+    for field in (fp.get("aircraft_faa"), fp.get("aircraft")):
+        for part in str(field or "").upper().split("/"):
+            part = part.split("-")[0].strip()
+            if 2 <= len(part) <= 4 and part.isalnum() and any(c.isdigit() for c in part):
+                return part
+    return ""
 
 
 def acars_slip(msg: dict, callsign: str) -> Slip:
@@ -125,6 +148,8 @@ class Flight:
         self.hoppie_status = ("off", "")
         self.last_check = None
         self._data_at = 0.0
+        self._ac = None                         # (type, source, when) of the aircraft you fly
+        self._pending: set = set()              # datalink slips waiting for their print delay
         self.vatsim_callsign = None             # the callsign you're connected with (found by CID)
         self.ap = {"phase": "gate", "alt": None, "gs": None, "airborne": False, "still_since": None,
                    "note": "", "suppressed": False}
@@ -168,10 +193,65 @@ class Flight:
     async def emit(self, slip):
         await self.app.dispatcher.queue.put(slip)      # flight slips never wait for "pause"
 
+    MODES = ("log", "auto", "except", "only")
+
+    @property
+    def mode(self) -> str:
+        m = self.cfg.get("print_mode", "except")
+        return m if m in self.MODES else "except"
+
     @property
     def auto(self) -> bool:
-        """False (the default): datalink only goes into the log, you print from there."""
-        return self.cfg.get("print_mode", "log") == "auto"
+        """Whether datalink can print by itself at all (for the panel)."""
+        return self.mode != "log"
+
+    def listed_types(self) -> set[str]:
+        raw = self.cfg.get("own_printer", [])
+        raw = " ".join(raw) if isinstance(raw, list) else str(raw)
+        return {t for t in re.split(r"[\s,;]+", raw.upper()) if t}
+
+    async def aircraft(self) -> tuple[str, str]:
+        """(ICAO type, where from): your VATSIM flight plan, else the SimBrief OFP."""
+        if self._ac and time.time() - self._ac[2] < 300:
+            return self._ac[0], self._ac[1]
+        t, src = "", ""
+        try:
+            pilot = await self._vatsim_pilot()
+            if pilot:
+                t, src = aircraft_type(pilot.get("flight_plan") or {}), "VATSIM"
+        except Exception as e:
+            log.info("aircraft from VATSIM: %s", e)
+        if not t and self.info and self.info.get("aircraft"):
+            t, src = self.info["aircraft"], "SimBrief"
+        self._ac = (t, src, time.time()) if t else None
+        return t, src
+
+    async def auto_ok(self) -> bool:
+        """Print datalink by itself now? Depends on the mode and, for two of them, the aircraft."""
+        m = self.mode
+        if m in ("log", "auto"):
+            return m == "auto"
+        t, _ = await self.aircraft()
+        listed = t in self.listed_types()
+        return not listed if m == "except" else listed
+
+    def _wanted(self, m: dict) -> bool:
+        """Which messages may print by themselves. "pdc" means departure clearances,
+        whether they come as a telex or over CPDLC; "telex" is all other free text too."""
+        kinds = self.cfg.get("auto_print", ["cpdlc", "pdc"])
+        return m["type"] in kinds or ("pdc" in kinds and is_pdc(m))
+
+    async def print_soon(self, entry: dict):
+        """Like an aircraft's ACARS printer: prints a few seconds after the message comes in."""
+        base = float(self.cfg.get("print_delay_seconds", 8))
+        spread = min(3.0, base * 0.4)                   # 8 s -> about 5 to 11 s
+        delay = max(0.0, base + random.uniform(-spread, spread)) if base > 0 else 0.0
+        async def later():
+            await asyncio.sleep(delay)
+            await self.print_entry(entry)
+        t = asyncio.create_task(later())
+        self._pending.add(t)
+        t.add_done_callback(self._pending.discard)
 
     async def file(self, slip, cat: str, print_now: bool = False, **meta) -> dict:
         """Puts a slip in the datalink log, and prints it when asked to."""
@@ -185,7 +265,9 @@ class Flight:
         await self.emit(self.log.slip(entry))
 
     async def _notice(self, title, lines, big):
-        await self.file(notice_slip(title, lines, big), "notice", print_now=self.auto)
+        entry = await self.file(notice_slip(title, lines, big), "notice")
+        if await self.auto_ok():
+            await self.print_soon(entry)
 
     # ------------------------------------------------------------ Hoppie
 
@@ -230,7 +312,7 @@ class Flight:
             entry = self.log.has_hoppie(m["id"])
             if entry is None:
                 entry = await self.file(acars_slip(m, self.info["callsign"]), m["type"],
-                                        hoppie_id=m["id"], old=m["old"], **{"from": m["from"]})
+                                        hoppie_id=m["id"], old=m["old"], pdc=is_pdc(m), **{"from": m["from"]})
             m["lid"] = entry["n"]
             self.messages.insert(0, m)
             if m["old"]:
@@ -238,8 +320,8 @@ class Flight:
             self.app.history("acars", f"{m['type']} from {m['from']} (in the log)")
             if m["from"] == self.station:
                 self._reply_received()
-            if self.auto and m["type"] in self.cfg.get("auto_print", ["cpdlc", "telex"]):
-                await self.print_entry(entry)
+            if self._wanted(m) and await self.auto_ok():
+                await self.print_soon(entry)
         del self.messages[100:]
         self.first_peek = False
 
@@ -578,9 +660,11 @@ class Flight:
                 "departure": self.departure,
                 "departure_mode": self.dcfg.get("mode", "connect"),
                 "arrival_nm": self.acfg.get("distance_nm", 150) if self.acfg.get("enabled", True) else None,
-                "print_mode": "auto" if self.auto else "log",
+                "print_mode": self.mode,
+                "aircraft": {"type": self._ac[0], "source": self._ac[1]} if self._ac else None,
+                "listed": sorted(self.listed_types()),
                 "messages": [{"id": m["id"], "from": m["from"], "type": m["type"],
                               "text": decode_cpdlc(m["packet"])["text"] if m["type"] == "cpdlc" else m["packet"],
-                              "time": zulu(m["seen"]), "old": m["old"],
+                              "time": zulu(m["seen"]), "old": m["old"], "pdc": is_pdc(m),
                               "printed": bool((self.log.get(m.get("lid")) or {}).get("printed"))}
                              for m in self.messages[:40]]}

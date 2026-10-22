@@ -63,7 +63,8 @@ def flight_from_ofp(d: dict) -> dict:
             "alternate": str(_obj(d.get("alternate")).get("icao_code") or "").upper(),
             "dest_lat": _num(a.get("pos_lat")), "dest_lon": _num(a.get("pos_long")),
             "orig_lat": _num(o.get("pos_lat")), "orig_lon": _num(o.get("pos_long")),
-            "ofp_id": _obj(d.get("params")).get("request_id")}
+            "ofp_id": _obj(d.get("params")).get("request_id"),
+            "aircraft": str(_obj(d.get("aircraft")).get("icaocode") or _obj(d.get("aircraft")).get("icao_code") or "").upper()}
 
 
 def cut_text(text: str, marker: str) -> list[str]:

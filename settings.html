@@ -282,14 +282,26 @@
       <div class="hint">The same code you entered in your aircraft. Get one on <a href="https://www.hoppie.nl/acars/system" target="_blank" rel="noopener">hoppie.nl</a>.</div></div>
     <div class="field">
       <label class="l" for="hoppie.print_mode">When something arrives</label>
-      <select id="hoppie.print_mode"><option value="log">Only put it in the log (print from the log page)</option><option value="auto">Print it automatically</option></select>
-      <div class="hint">Covers datalink messages and the "no reply" and "datalink N/A" notices. Handy with the Fenix, which prints by itself. The weather has its own switches under Weather.</div>
+      <select id="hoppie.print_mode">
+        <option value="except">Print automatically, except on the aircraft below</option>
+        <option value="only">Print automatically only on the aircraft below</option>
+        <option value="auto">Always print automatically</option>
+        <option value="log">Never: only put it in the log (print from the log page)</option>
+      </select>
+      <div class="hint">Covers datalink messages and the "no reply" and "datalink N/A" notices; everything is in the log either way. The weather has its own switches under Weather.</div>
+    </div>
+    <div class="row2">
+      <div class="field"><label class="l" for="hoppie.own_printer">Aircraft (ICAO types)</label><input type="text" id="hoppie.own_printer" aria-describedby="ac-hint">
+        <div class="hint" id="ac-hint">Separated by commas, e.g. the Fenix A319/A320/A321 and neos that print by themselves: A319, A320, A321, A19N, A20N, A21N. Taken from your VATSIM flight plan, or your SimBrief plan before you connect.</div></div>
+      <div class="field"><label class="l" for="hoppie.print_delay_seconds">Print delay (seconds)</label><input type="number" id="hoppie.print_delay_seconds" style="max-width:120px">
+        <div class="hint">Like an aircraft's ACARS printer: about this long after a message comes in, a few seconds either way. 0 prints straight away.</div></div>
     </div>
     <div class="field">
       <label class="l">With automatic printing, print these</label>
       <div class="row3">
-        <label class="check"><input type="checkbox" name="hpap" value="cpdlc"><span>CPDLC<small>Clearances, climb, direct-to</small></span></label>
-        <label class="check"><input type="checkbox" name="hpap" value="telex"><span>Telex<small>PDCs and free text</small></span></label>
+        <label class="check"><input type="checkbox" name="hpap" value="pdc"><span>PDC<small>Departure clearances, as telex or CPDLC</small></span></label>
+        <label class="check"><input type="checkbox" name="hpap" value="cpdlc"><span>CPDLC<small>All of it: climb, direct-to, contact</small></span></label>
+        <label class="check"><input type="checkbox" name="hpap" value="telex"><span>Telex<small>All free text, PDCs included</small></span></label>
         <label class="check"><input type="checkbox" name="hpap" value="progress"><span>Progress</span></label>
         <label class="check"><input type="checkbox" name="hpap" value="position"><span>Position</span></label>
       </div>
@@ -425,6 +437,7 @@ function fill(c) {
     const v = c[sec]?.[key];
     if (el.type === "checkbox") el.checked = !!v;
     else if (el.tagName === "TEXTAREA") el.value = (v || []).join("\n");
+    else if (Array.isArray(v)) el.value = v.join(", ");
     else if (el.type === "password") {
       el.value = "";
       el.placeholder = c._secrets[el.id] ? "Saved - leave empty to keep" : "Not set";
@@ -450,6 +463,7 @@ function collect() {
     out[sec] ??= {};
     if (el.type === "checkbox") out[sec][key] = el.checked;
     else if (el.tagName === "TEXTAREA") out[sec][key] = el.value.split("\n").map(s => s.trim()).filter(Boolean);
+    else if (Array.isArray(cfg?.[sec]?.[key])) out[sec][key] = el.value.split(/[\s,;]+/).map(s => s.trim().toUpperCase()).filter(Boolean);
     else out[sec][key] = el.value;
   }
   out.general.output = [...document.querySelectorAll("input[name=out]:checked")].map(b => b.value).join(",");

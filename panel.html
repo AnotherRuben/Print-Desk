@@ -390,11 +390,18 @@ function renderFlight(f) {
   else if (a.distance != null) { al.className = "lamp"; $("ar-text").textContent = `${a.distance} NM to ${i.destination}`; $("ar-sub").textContent = `Fetched at ${f.arrival_nm} NM (ATIS, or METAR if none).`; }
   else { al.className = "lamp"; $("ar-text").textContent = `At ${f.arrival_nm} NM`; $("ar-sub").textContent = a.status === "waiting" ? "Waiting for your position on VATSIM." : a.status; }
 
-  $("pmode").textContent = f.print_mode === "auto" ? "Printing automatically" : "Log only - print from the log";
+  const ac = f.aircraft ? `${f.aircraft.type} (${f.aircraft.source})` : "aircraft not known yet";
+  const listed = f.aircraft && (f.listed || []).includes(f.aircraft.type);
+  $("pmode").textContent = {
+    log: "Log only - print from the log",
+    auto: "Printing automatically",
+    except: f.aircraft ? (listed ? `${ac}: prints by itself, so log only` : `${ac}: printing automatically`) : "Printing automatically unless it's a listed aircraft - " + ac,
+    only: f.aircraft ? (listed ? `${ac}: printing automatically` : `${ac}: log only`) : "Printing only on listed aircraft - " + ac,
+  }[f.print_mode] || "";
   $("msgs").innerHTML = f.messages.length ? f.messages.map(m => `
     <div class="msg${m.old ? " old" : ""}">
       <span class="mt">${esc(m.time)}</span>
-      <div><div class="mh">${esc(m.from)}<small>${esc(m.type)}</small>${m.old ? ' <small>before this flight</small>' : ""}${m.printed ? ' <span class="tag">printed</span>' : ""}</div>
+      <div><div class="mh">${esc(m.from)}<small>${esc(m.type)}</small>${m.pdc ? ' <span class="tag" style="color:var(--accent)">PDC</span>' : ""}${m.old ? ' <small>before this flight</small>' : ""}${m.printed ? ' <span class="tag">printed</span>' : ""}</div>
            <div class="mb">${esc(m.text)}</div></div>
       <button class="small" data-print="${m.id}">Print</button>
     </div>`).join("") : '<div class="meta">No datalink messages for this callsign yet.</div>';
