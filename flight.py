@@ -134,6 +134,7 @@ class Flight:
         self.reset_state()
 
     def reset_state(self):
+        self.vref: int | None = None            # typed in the panel, for the landing report
         self.messages: list[dict] = []          # newest first
         self.seen_ids: set[int] = set()
         self.first_peek = True
@@ -661,6 +662,9 @@ class Flight:
                 "departure_mode": self.dcfg.get("mode", "connect"),
                 "arrival_nm": self.acfg.get("distance_nm", 150) if self.acfg.get("enabled", True) else None,
                 "print_mode": self.mode,
+                "vref": self.vref,
+                "landing": self.app.last_landing,
+                "msfs": self.app.state.conn.get("msfs"),
                 "aircraft": {"type": self._ac[0], "source": self._ac[1]} if self._ac else None,
                 "listed": sorted(self.listed_types()),
                 "messages": [{"id": m["id"], "from": m["from"], "type": m["type"],

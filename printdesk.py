@@ -62,6 +62,15 @@ async def one_shot(args, cfg, http):
         from simbrief import SimBrief
         sb = SimBrief(cfg.get("simbrief", {}), http)
         await dispatcher.emit(sb.file_slip(Path(args.file)) if args.file else await sb.ofp_slip())
+    elif args.scenario == "landing":
+        from landing import LandingWatcher, demo_readings
+        got = []
+        w = LandingWatcher(got.append, cfg.get("landing", {}))
+        for r in demo_readings():
+            w.feed(r)
+        info = {"callsign": "DEMO123", "origin": "EHAM", "destination": "EGLL", "aircraft": "A320",
+                "registration": "PH-DSK"}
+        await dispatcher.emit(Layouts(cfg).landing_report(got[0], info, vref=134))
     elif args.scenario == "slip":
         from avatars import DemoAvatars
         pic = await DemoAvatars().get(login="Print Desk") if cfg["avatars"].get("enabled") else None
@@ -146,7 +155,7 @@ async def main(args):
                 await runner.cleanup()
 
 
-SCENARIOS = ["all", "sub", "resub", "gift", "bits", "tip", "raid", "follow", "youtube", "hype", "slip"]
+SCENARIOS = ["all", "sub", "resub", "gift", "bits", "tip", "raid", "follow", "youtube", "hype", "slip", "landing"]
 
 
 def cli():

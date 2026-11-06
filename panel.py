@@ -83,6 +83,8 @@ class Panel:
         r.add_post("/api/flight/cancel", self.api_flight_cancel)
         r.add_post("/api/flight/print/{id}", self.api_flight_print)
         r.add_post("/api/flight/arrival", self.api_flight_arrival)
+        r.add_post("/api/flight/vref", self.api_flight_vref)
+        r.add_post("/api/flight/landing", self.api_flight_landing)
         r.add_post("/api/flight/departure", self.api_flight_departure)
         r.add_post("/api/autopause", self.api_autopause)
         r.add_post("/api/picture-test", self.api_picture_test)
@@ -357,6 +359,27 @@ class Panel:
         top = int(float(self.app.cfg.get("autopause", {}).get("altitude_ft", 15000)))
         return self.ok(f"Auto-pause on: from taxi to {top:,} ft and from {top:,} ft to parked." if on
                        else "Auto-pause off.")
+
+    async def api_flight_vref(self, request):
+        f = self.app.flight
+        raw = str((await self.body(request)).get("vref") or "").strip()
+        if not raw:
+            f.vref = None
+            return self.ok("Vref cleared.")
+        if not raw.isdigit() or not 60 <= int(raw) <= 250:
+            return self.fail("Vref should be a speed in knots, like 134.")
+        f.vref = int(raw)
+        return self.ok(f"Vref {f.vref} kt set for this flight.")
+
+    async def api_flight_landing(self, request):
+        last = self.app.last_landing
+        entry = self.app.flight.log.get(last["n"]) if last else None
+        if not entry:
+            return self.fail("No landing recorded yet.")
+        if not self.dispatcher.outputs:
+            return self.fail("No working output. Check Settings.")
+        await self.app.flight.print_entry(entry)
+        return self.ok("Printing the landing report.")
 
     async def api_flight_arrival(self, request):
         return await self._weather("arr")

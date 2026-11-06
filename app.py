@@ -77,6 +77,11 @@ class App:
         self.sources: dict[str, asyncio.Task] = {}
         from flight import Flight
         self.flight = Flight(self, HERE / "acars_log.jsonl")
+        from landing import LandingWatcher
+        self.landing = LandingWatcher(self._on_landing, self.cfg.get("landing", {}))
+        self.sim = None                                 # the MSFS reader (Windows only)
+        self.sim_acid = ""                              # the aircraft's ATC ID, from the sim
+        self.last_landing = None
         self.login_task: asyncio.Task | None = None
         self.login_info: dict = {}
 
@@ -177,12 +182,47 @@ class App:
         self.worker = asyncio.create_task(self.dispatcher.run())
         for name in SOURCES:
             await self.start_source(name)
+        self.start_sim()
         last = self.backfill.last_seen()
         self.heartbeat = asyncio.create_task(self.backfill.heartbeat())
         if last is None:                               # first start with the stream log: the last day
             asyncio.create_task(self._catch_up(time.time() - 24 * 3600))
         elif time.time() - last > 120:                 # Print Desk was off for a while
             asyncio.create_task(self._catch_up(last))
+
+    # ------------------------------------------------------------ landing reports
+
+    def start_sim(self):
+        if self.sim:
+            self.sim.stop()
+            self.sim = None
+        if not self.cfg.get("landing", {}).get("enabled", True):
+            self.state.status("msfs", "off", "MSFS: landing reports switched off")
+            return
+        from simconnect_source import SimSource
+        self.sim = SimSource(asyncio.get_running_loop(), self.landing.feed, self._status("msfs"), self._sim_info)
+        self.sim.start()
+
+    def _sim_info(self, info):
+        self.sim_acid = info.get("acid") or self.sim_acid
+
+    def _on_landing(self, rep):
+        asyncio.ensure_future(self._landing_report(rep))
+
+    async def _landing_report(self, rep: dict):
+        from slips import Layouts
+        lcfg = self.cfg.get("landing", {})
+        info = dict(self.flight.info or {})
+        if not info.get("registration") and self.sim_acid:
+            info["registration"] = self.sim_acid
+        shown = rep if lcfg.get("trace", True) else {**rep, "trace": []}
+        slip = Layouts(self.cfg).landing_report(shown, info, vref=self.flight.vref)
+        entry = await self.flight.file(slip, "landing")
+        self.last_landing = {"n": entry["n"], "vs": abs(rep["vs"]), "g": rep["g"], "score": rep["score"],
+                             "bounces": rep["bounces"], "time": time.strftime("%H:%M")}
+        self.history("flight", f"landing: {abs(rep['vs'])} fpm, {rep['g']} G, score {rep['score']}%")
+        if lcfg.get("auto_print", True):
+            await self.flight.print_entry(entry)
 
     async def _catch_up(self, since: float):
         try:
@@ -213,6 +253,11 @@ class App:
             if name in changed:
                 await self.start_source(name)
                 done.append(f"{SOURCES[name]} reconnected.")
+        if "landing" in changed:
+            self.landing.configure(new.get("landing", {}))
+            if new.get("landing", {}).get("enabled", True) != bool(self.sim):
+                self.start_sim()
+            done.append("Landing reports updated.")
         if "panel" in changed:
             done.append("Panel address changes apply after restarting Print Desk.")
         return done

@@ -128,6 +128,25 @@ Print Desk takes the ATC callsign and airports from your latest OFP and, until y
 Print Desk never sends anything on Hoppie and checks only every 45-75 seconds
 (briefly every ~25 seconds while waiting for a reply), as Hoppie asks.
 
+## Landing report
+
+After every landing in MSFS 2020 or 2024, Print Desk prints a landing summary once you've
+slowed below 40 knots:
+
+- **At the flare** (50 ft): airspeed, sink rate and, if you typed your Vref in the panel's
+  *Landing* tile, the deviation from it.
+- **At touchdown**: sink rate (the sim's own touchdown value), G, pitch, bank, crab, airspeed
+  and groundspeed, plus tail strike, wing/pod strike and bounces.
+- **Last seconds**: a second-by-second table from 10 s before touchdown to 3 s after.
+- A **landing score** out of 100: an open, simple formula (sink rate, G, bank, crab, bounces).
+
+The data comes straight from the sim through SimConnect, MSFS's own add-on interface, read
+about 20 times a second; nothing to install in MSFS. Windows only. Reports also go into the
+datalink log (filter *Landings*), and *Print last* in the panel prints the latest again.
+Settings › Landing report has the print speed, the table, and the tail/wing strike limits
+(they differ per aircraft; about 10 degrees pitch suits most airliners).
+`printdesk test landing` prints a made-up one.
+
 ## Auto-pause in busy flight phases
 
 The switch under the main buttons. During a flight (and while you're on VATSIM) stream
@@ -153,6 +172,7 @@ printdesk test all        fake stream events, nobody pays
 printdesk test hype       just a hype train
 printdesk test follow     follows, including a follow-bot flood
 printdesk test youtube    members, gifted memberships, Super Chats, a new subscriber
+printdesk test landing    a landing report from a made-up approach
 printdesk picture yourname friend_name       real Twitch profile pictures on a test slip
 printdesk picture "C:\Photos\me.jpg"            any picture file on a test slip
 printdesk ofp             print your latest SimBrief OFP (same as print_ofp.bat)

@@ -78,7 +78,8 @@
   .fl-cs { font: 700 20px ui-monospace, "Cascadia Mono", Consolas, monospace; letter-spacing: .03em; }
   .fl-route { color: var(--muted); font: 600 14px ui-monospace, Consolas, monospace; margin-left: 8px; }
   .fl-grid { display: grid; gap: 10px; grid-template-columns: 1fr; }
-  @media (min-width: 720px) { .fl-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+  @media (min-width: 720px) { .fl-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (min-width: 1100px) { .fl-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
   .tile { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; min-width: 0; }
   .tile h3 { margin: 0 0 6px; font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
   .lamp { display: flex; align-items: center; gap: 8px; font-weight: 650; }
@@ -212,6 +213,12 @@
             <div class="lamp" id="ar-lamp" style="margin-top:8px"><span class="bulb"></span><span id="ar-text"></span></div>
             <div class="sub" id="ar-sub"></div>
             <div class="row-b"><button class="small" id="dp-now">Departure now</button><button class="small" id="ar-now">Arrival now</button></div>
+          </div>
+          <div class="tile">
+            <h3>Landing</h3>
+            <div class="lamp" id="ld-lamp"><span class="bulb"></span><span id="ld-text"></span></div>
+            <div class="sub" id="ld-sub"></div>
+            <div class="row-b"><input id="vref" aria-label="Vref in knots" placeholder="Vref" inputmode="numeric" maxlength="3" style="width:5.5em"><button class="small" id="vref-set">Set Vref</button><button class="small" id="ld-print">Print last</button></div>
           </div>
         </div>
         <div class="msgs-head"><h2 style="margin:0">Messages</h2><span class="meta" id="pmode" style="margin:0"></span><a class="btn-link" href="/log" target="printdesk-log">Open datalink log</a></div>
@@ -392,6 +399,12 @@ function renderFlight(f) {
 
   const ac = f.aircraft ? `${f.aircraft.type} (${f.aircraft.source})` : "aircraft not known yet";
   const listed = f.aircraft && (f.listed || []).includes(f.aircraft.type);
+  const ms = f.msfs || {}, ld = f.landing;
+  $("ld-lamp").className = "lamp" + (ms.level === "ok" ? " ok" : ms.level === "error" ? " error" : "");
+  $("ld-text").textContent = ld ? `${ld.vs} fpm, ${ld.g.toFixed(2)} G - ${ld.score}%` : (ms.detail || "MSFS: not connected").replace(/^MSFS: /, "MSFS ");
+  $("ld-sub").textContent = ld ? `Landed ${ld.time}${ld.bounces ? `, ${ld.bounces} bounce${ld.bounces > 1 ? "s" : ""}` : ""}. Prints below 40 kt.`
+                                : "Report prints after landing, once below 40 kt." + (f.vref ? ` Vref ${f.vref} kt.` : "");
+  if (document.activeElement !== $("vref")) $("vref").value = f.vref || "";
   $("pmode").textContent = {
     log: "Log only - print from the log",
     auto: "Printing automatically",
@@ -420,6 +433,17 @@ $("st-set").onclick = async (e) => {
   const d = await r.json(); toast(d.message, !d.ok); refresh();
 };
 
+async function postJSON(path, body, btn) {
+  if (btn) btn.disabled = true;
+  try {
+    const r = await fetch("/api/" + path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const d = await r.json(); toast(d.message, !d.ok);
+  } catch (e) { toast("Print Desk isn't responding.", true); }
+  finally { if (btn) btn.disabled = false; refresh(); }
+}
+$("vref-set").onclick = (e) => postJSON("flight/vref", { vref: $("vref").value }, e.currentTarget);
+$("vref").addEventListener("keydown", (e) => { if (e.key === "Enter") $("vref-set").click(); });
+$("ld-print").onclick = (e) => act("flight/landing", e.currentTarget);
 $("ap-on").onchange = async (e) => {
   try {
     const r = await fetch("/api/autopause", { method: "POST", headers: { "Content-Type": "application/json" },
