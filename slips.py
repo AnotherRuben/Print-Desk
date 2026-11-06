@@ -385,42 +385,45 @@ class Layouts:
 
     def landing_report(self, rep: dict, info: dict | None = None, vref: int | None = None, when=None,
                        parts: dict | None = None):
-        """A landing summary, in the style of an airline's flight data printout."""
+        """A landing summary, framed like the other ACARS printouts."""
         from datetime import datetime, timezone
         info = info or {}
         when = when or datetime.now(timezone.utc)
         parts = {"show_flare": True, "show_checks": True, "trace": False, "show_score": True, **(parts or {})}
         actype = info.get("aircraft") or rep.get("type") or ""
+        callsign = info.get("callsign") or "-----"
+        reg = info.get("registration") or rep.get("acid") or ""
+        route = f"{info['origin']}-{info['destination']}" if info.get("origin") and info.get("destination") else ""
+        box = lambda title: s.center(f" {title} ".center(36, "-"))
         s = Slip(f"Landing report {info.get('callsign', '')} {rep['score']}%".strip(), kind="sim")
-        s.text(f"{actype + ' ' if actype else ''}LANDING SUMMARY REPORT", bold=True).blank()
-        s.text(f"{'ACID':<10}{'FLT':<10}UTC")
-        s.text(f"{(info.get('registration') or rep.get('acid') or '-----')[:9]:<10}"
-               f"{(info.get('callsign') or '-----')[:9]:<10}{when.strftime('%d%b%y %H%MZ').upper()}")
-        s.blank()
-        s.text(f"{'FROM':<10}TO")
-        s.text(f"{(info.get('origin') or '----'):<10}{info.get('destination') or '----'}")
-        s.blank()
+        box("ACARS")
+        s.center("LANDING REPORT", big=True)
+        s.kv(f"FLT: {callsign}", when.strftime("%H%MZ"), bold=True)
+        s.kv(f"ACID: {reg or '-----'}", when.strftime("%d%b%y").upper(), bold=True)
+        if actype or route:
+            s.kv(f"TYPE: {actype or '----'}", route, bold=True)
+        s.rule()
         row = lambda label, value: s.text(f"{label:>18}  {value}")
         fl = rep.get("flare")
         if parts["show_flare"]:
-            s.text("***AT FLARE (50 FT)***", bold=True)
+            s.text("AT FLARE (50 FT)", bold=True)
             if fl and vref:
-                row("VREF DEV:", f"{fl['ias'] - vref:+d} KNOTS")
+                row("VREF DEV:", f"{fl['ias'] - vref:+d} KT")
             if fl:
-                row("IAS:", f"{fl['ias']} KNOTS")
+                row("IAS:", f"{fl['ias']} KT")
                 row("SINK RATE:", f"{abs(fl['vs'])} FPM")
             else:
                 row("", "NOT RECORDED")
             s.blank()
-        s.text("***AT TOUCHDOWN***", bold=True)
+        s.text("AT TOUCHDOWN", bold=True)
         row("RATE:", f"{abs(rep['vs'])} FPM")
         row("G-LOAD:", f"{rep['g']:.2f} G")
         row("PITCH:", f"{rep['pitch']:.1f} DEG")
         row("BANK:", f"{rep['bank']:.1f} DEG")
         row("CRAB:", f"{rep['crab']:.1f} DEG")
-        row("IAS / GS:", f"{rep['ias']} / {rep['gs']} KNOTS")
+        row("IAS / GS:", f"{rep['ias']} / {rep['gs']} KT")
         if vref:
-            row("VREF:", f"{vref} KNOTS")
+            row("VREF:", f"{vref} KT")
         if parts["show_checks"]:
             s.blank()
             row("TAIL STRIKE:", "TRUE" if rep["tail_strike"] else "FALSE")
@@ -429,17 +432,14 @@ class Layouts:
         if rep.get("touch_and_go"):
             row("", "TOUCH AND GO")
         if parts["trace"] and rep.get("trace"):
-            s.blank().text("***LAST SECONDS***", bold=True)
+            s.rule().text("LAST SECONDS", bold=True)
             s.text(f"{'SEC':>4} {'AGL':>5} {'IAS':>4} {'V/S':>6} {'PITCH':>6} {'BANK':>5} {'G':>5}")
             for r in rep["trace"]:
                 mark = "TD" if r["s"] == 0 else f"{r['s']:+d}"
                 s.text(f"{mark:>4} {r['agl']:>5} {r['ias']:>4} {r['vs']:>6} {r['pitch']:>6.1f} {r['bank']:>5.1f} {r['g']:>5.2f}")
-        s.blank()
         if parts["show_score"]:
-            s.center(f"LANDING SCORE: {rep['score']}%", big=True)
-            s.blank()
-        d, t = stamp()
-        s.kv(d, t)
+            s.rule().center(f"LANDING SCORE: {rep['score']}%", bold=True)
+        box("END")
         return s
 
     def picture_test(self, name, avatar, note=""):
