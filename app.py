@@ -207,6 +207,9 @@ class App:
         self.sim_acid = info.get("acid") or self.sim_acid
 
     def _on_landing(self, rep):
+        if self.cfg.get("landing", {}).get("when", "flight") == "flight" and not self.flight.info:
+            log.info("landing not reported: no flight started (Settings > Landing report > When)")
+            return
         asyncio.ensure_future(self._landing_report(rep))
 
     async def _landing_report(self, rep: dict):

@@ -339,6 +339,11 @@
     <h2>Landing report</h2>
     <p class="lead">After every landing in MSFS (2020 or 2024): sink rate, G, pitch, bank and crab at touchdown, bounces and a score, read straight from the sim through SimConnect. Type your Vref in the panel's Landing tile to see the deviation at the flare. Windows only; in the datalink log either way.</p>
     <label class="check"><input type="checkbox" id="landing.enabled"><span>Record landings<small>Connects to MSFS while it's running</small></span></label>
+    <div class="field"><label class="l" for="landing.when">When</label>
+      <select id="landing.when">
+        <option value="flight">Only during a flight (after "Start flight from SimBrief")</option>
+        <option value="always">Every landing in MSFS</option>
+      </select></div>
     <label class="check"><input type="checkbox" id="landing.auto_print"><span>Print the report by itself<small>Off: only in the datalink log</small></span></label>
     <div class="field">
       <label class="l">On the slip</label>

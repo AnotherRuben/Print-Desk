@@ -130,8 +130,9 @@ Print Desk never sends anything on Hoppie and checks only every 45-75 seconds
 
 ## Landing report
 
-After every landing in MSFS 2020 or 2024, Print Desk prints a landing summary once you've
-slowed below 40 knots:
+After every landing in MSFS 2020 or 2024 during a flight (after *Start flight from SimBrief*;
+Settings › Landing report › *When* can make it every landing), Print Desk prints a landing
+summary once you've slowed below 40 knots:
 
 - **At the flare** (50 ft): airspeed, sink rate and, if you typed your Vref in the panel's
   *Landing* tile, the deviation from it.
