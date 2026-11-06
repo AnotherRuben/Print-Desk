@@ -78,7 +78,9 @@ class App:
         from flight import Flight
         self.flight = Flight(self, HERE / "acars_log.jsonl")
         from landing import LandingWatcher
+        from runways import Runways
         self.landing = LandingWatcher(self._on_landing, self.cfg.get("landing", {}))
+        self.runways = Runways(HERE / "runways.csv", self.http)
         self.sim = None                                 # the MSFS reader (Windows only)
         self.sim_acid = ""                              # the aircraft's ATC ID, from the sim
         self.last_landing = None
@@ -216,6 +218,14 @@ class App:
         from slips import Layouts
         lcfg = self.cfg.get("landing", {})
         info = dict(self.flight.info or {})
+        if rep.get("lat") is not None:
+            from landing import score
+            try:
+                rep["runway"] = await self.runways.find(rep["lat"], rep["lon"], rep["trk"],
+                                                        (info.get("destination"), info.get("origin"), info.get("alternate")))
+            except Exception as e:
+                log.info("runway lookup: %s", e)
+            rep["score"] = score(rep)
         if not info.get("registration") and self.sim_acid:
             info["registration"] = self.sim_acid
         slip = Layouts(self.cfg).landing_report(rep, info, vref=self.flight.vref, parts=lcfg)

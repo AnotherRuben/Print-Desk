@@ -389,7 +389,8 @@ class Layouts:
         from datetime import datetime, timezone
         info = info or {}
         when = when or (datetime.fromtimestamp(rep["utc"], timezone.utc) if rep.get("utc") else datetime.now(timezone.utc))
-        parts = {"show_flare": True, "show_checks": True, "trace": False, "show_score": True, **(parts or {})}
+        parts = {"show_flare": True, "show_runway": True, "show_checks": True, "trace": False, "show_score": True,
+                 **(parts or {})}
         actype = info.get("aircraft") or rep.get("type") or ""
         callsign = info.get("callsign") or "-----"
         reg = info.get("registration") or rep.get("acid") or ""
@@ -424,6 +425,14 @@ class Layouts:
         row("IAS / GS:", f"{rep['ias']} / {rep['gs']} KT")
         if vref:
             row("VREF:", f"{vref} KT")
+        rwy = rep.get("runway")
+        if parts.get("show_runway", True) and rwy:
+            side = "ON" if abs(rwy["cross"]) < 0.5 else ("RIGHT" if rwy["cross"] > 0 else "LEFT")
+            s.blank()
+            row("RUNWAY:", f"{rwy['airport']} {rwy['ident']}")
+            row("FROM THRESHOLD:", f"{rwy['from_threshold']} M / {round(rwy['from_threshold'] / 0.3048)} FT")
+            row("TOUCHDOWN ZONE:", {"IN": "IN", "LONG": "LONG", "SHORT": "SHORT (BEFORE THR)"}[rwy["tdz"]])
+            row("CENTRELINE:", "ON" if side == "ON" else f"{abs(rwy['cross']):.1f} M {side}")
         if parts["show_checks"]:
             s.blank()
             row("TAIL STRIKE:", "TRUE" if rep["tail_strike"] else "FALSE")

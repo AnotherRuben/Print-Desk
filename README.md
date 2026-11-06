@@ -138,8 +138,14 @@ summary once you've slowed below 40 knots:
   *Landing* tile, the deviation from it.
 - **At touchdown**: sink rate (the sim's own touchdown value), G, pitch, bank, crab, airspeed
   and groundspeed, plus tail strike, wing/pod strike and bounces.
+- **Runway**: which runway, how far past the threshold you touched down, whether that was in
+  the touchdown zone (the first 900 m, or a third of shorter runways), and how far off the
+  centreline. Uses the aircraft's position from MSFS and free runway data from OurAirports,
+  downloaded once into `runways.csv` and refreshed monthly. Scenery can differ a little from
+  the real world, so a metre or two is normal.
 - **Last seconds** (off by default): a second-by-second table from 10 s before touchdown to 3 s after.
-- A **landing score** out of 100: an open, simple formula (sink rate, G, bank, crab, bounces).
+- A **landing score** out of 100: an open, simple formula (sink rate, G, bank, crab, bounces,
+  touchdown zone and centreline).
 
 The data comes straight from the sim through SimConnect, MSFS's own add-on interface, read
 about 20 times a second; nothing to install in MSFS. Windows only. Reports also go into the

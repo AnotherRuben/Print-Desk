@@ -70,6 +70,10 @@ async def one_shot(args, cfg, http):
             w.feed(r)
         info = {"callsign": "DEMO123", "origin": "EHAM", "destination": "EGLL", "aircraft": "A320",
                 "registration": "PH-DSK"}
+        from landing import score
+        got[0]["runway"] = {"airport": "EGLL", "ident": "27L", "from_threshold": 412, "cross": -1.8,
+                            "tdz": "IN", "zone": 900, "width": 50}          # made up: no position in the demo
+        got[0]["score"] = score(got[0])
         await dispatcher.emit(Layouts(cfg).landing_report(got[0], info, vref=134, parts=cfg.get("landing", {})))
     elif args.scenario == "slip":
         from avatars import DemoAvatars

@@ -8,6 +8,7 @@ last_running.txt
 se_history_*.json
 
 # Caches Print Desk fills by itself
+runways.csv
 avatar_cache/
 emote_cache/
 stream_log_images/

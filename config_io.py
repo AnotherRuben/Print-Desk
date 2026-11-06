@@ -28,7 +28,7 @@ DEFAULTS = {
     "arrival": {"enabled": True, "distance_nm": 150, "prefer": "atis", "print": True},
     "vatsim": {"cid": ""},
     "landing": {"enabled": True, "when": "flight", "auto_print": True, "print_below_kts": 40,
-                "show_flare": True, "show_checks": True, "trace": False, "show_score": True,
+                "show_flare": True, "show_runway": True, "show_checks": True, "trace": False, "show_score": True,
                 "tail_strike_pitch": 10, "wing_strike_bank": 7},
     "autopause": {"enabled": False, "altitude_ft": 15000, "taxi_kts": 5, "parked_seconds": 120},
     "panel": {"enabled": True, "port": 8770, "host": "0.0.0.0"},

@@ -16,6 +16,7 @@ A reading is a dict with:
   hdg, trk   true heading and true ground track, degrees
   g          G-force
   td_vs      the sim's own touchdown vertical speed, feet/minute (optional)
+  lat, lon   position in degrees (optional; for touchdown zone and centreline)
 """
 from __future__ import annotations
 
@@ -49,6 +50,11 @@ def score(rep: dict) -> int:
     if abs(rep["crab"]) > 3:
         s -= (abs(rep["crab"]) - 3) * 2
     s -= 15 * rep["bounces"]
+    rwy = rep.get("runway")
+    if rwy:
+        s -= {"IN": 0, "LONG": 15, "SHORT": 25}.get(rwy["tdz"], 0)     # outside the touchdown zone
+        if abs(rwy["cross"]) > 3:
+            s -= min(20.0, (abs(rwy["cross"]) - 3) * 2)                # off the centreline
     if rep["tail_strike"] or rep["wing_strike"]:
         s = min(s, 30.0)
     return int(max(0, min(100, round(s))))
@@ -117,6 +123,7 @@ class LandingWatcher:
         self.td = {
             "t": ground["t"],
             "utc": _time.time(),                        # the clock time of touchdown, for the header
+            "lat": ground.get("lat"), "lon": ground.get("lon"), "trk": air["trk"],
             "vs": air["vs"], "ias": air["ias"], "gs": air["gs"],
             "pitch": air["pitch"], "bank": air["bank"],
             "crab": _angle(air["hdg"] - air["trk"]) if air["gs"] > 30 else 0.0,
@@ -157,6 +164,7 @@ class LandingWatcher:
             "pitch": round(td["pitch"], 1), "bank": round(td["bank"], 1), "crab": round(td["crab"], 1),
             "ias": round(td["ias"]), "gs": round(td["gs"]),
             "bounces": td["bounces"], "touch_and_go": td["touch_and_go"], "utc": td["utc"],
+            "lat": td["lat"], "lon": td["lon"], "trk": td["trk"],
             "flare": {k: round(v) for k, v in td["flare"].items()} if td["flare"] else None,
             "tail_strike": td["pitch"] >= tail,
             "wing_strike": abs(td["bank"]) >= wing,

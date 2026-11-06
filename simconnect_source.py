@@ -30,6 +30,8 @@ VARS = [
     ("GPS GROUND TRUE TRACK", "degrees", "trk", lambda v: v % 360),
     ("G FORCE", "GForce", "g", float),
     ("PLANE TOUCHDOWN NORMAL VELOCITY", "feet per second", "td_vs", lambda v: -abs(v) * 60),
+    ("PLANE LATITUDE", "degrees", "lat", float),
+    ("PLANE LONGITUDE", "degrees", "lon", float),
 ]
 
 RECV_EXCEPTION, RECV_OPEN, RECV_QUIT, RECV_SIMOBJECT_DATA = 1, 2, 3, 8
