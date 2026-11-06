@@ -27,6 +27,10 @@ DEFAULTS = {
     "departure": {"mode": "connect", "prefer": "atis", "print": True},
     "arrival": {"enabled": True, "distance_nm": 150, "prefer": "atis", "print": True},
     "vatsim": {"cid": ""},
+    "landing": {"enabled": True, "when": "flight", "auto_print": True, "print_below_kts": 40,
+                "show_flare": True, "show_runway": True, "show_checks": True, "trace": False, "show_score": True,
+                "show_remarks": True, "remarks_below": 80, "max_rate_fpm": 600,
+                "tail_strike_pitch": 10, "wing_strike_bank": 7},
     "autopause": {"enabled": False, "altitude_ft": 15000, "taxi_kts": 5, "parked_seconds": 120},
     "panel": {"enabled": True, "port": 8770, "host": "0.0.0.0"},
     "simbrief": {"username": "", "print_format": "Leonardo MD80 (ACARS)", "cut_at": "[OFP]",
@@ -102,6 +106,11 @@ COMMENTS = {
     "arrival.distance_nm": "print the arrival ATIS (or METAR) once within this distance",
     "arrival.prefer": '"atis" (METAR if no ATIS is online) or "metar"',
     "vatsim": "VATSIM",
+    "landing": "Landing report from MSFS (SimConnect, Windows): prints after landing once below the speed",
+    "landing.when": '"flight" (only after Start flight from SimBrief) or "always" (every landing in MSFS)',
+    "landing.max_rate_fpm": "the manufacturer's sink-rate limit at touchdown (hard landing); about 600 fpm for most airliners",
+    "landing.tail_strike_pitch": "pitch at touchdown (degrees) counted as a tail strike; differs per aircraft",
+    "landing.wing_strike_bank": "bank at touchdown (degrees) counted as a wing or pod strike",
     "vatsim.cid": "your VATSIM CID (optional): finds you on VATSIM whatever callsign you connect with",
     "autopause": "Pause stream printing in busy flight phases (needs you on VATSIM during a flight)",
     "autopause.altitude_ft": "paused from taxi until above this, and again below it (500 ft lower) until parked",
@@ -190,6 +199,11 @@ def save(path: Path, cfg: dict):
     tomllib.loads(text)                     # never write a file we can't read back
     tmp = path.with_suffix(".tmp")
     tmp.write_text(text, encoding="utf-8")
+    if path.exists() and path.read_text(encoding="utf-8", errors="ignore") != text:
+        try:                                # the previous settings, in case something goes wrong
+            path.replace(path.with_name("config.backup.toml"))
+        except OSError:
+            pass
     tmp.replace(path)
 
 

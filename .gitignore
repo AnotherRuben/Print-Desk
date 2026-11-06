@@ -1,5 +1,6 @@
 # Your own settings, logins and history: never commit these
 config.toml
+config.backup.toml
 twitch_tokens.json
 *.jsonl
 *.log
@@ -8,6 +9,7 @@ last_running.txt
 se_history_*.json
 
 # Caches Print Desk fills by itself
+runways.csv
 avatar_cache/
 emote_cache/
 stream_log_images/

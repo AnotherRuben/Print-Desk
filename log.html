@@ -162,8 +162,8 @@ const esc = (s) => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<":
 const BOOK = location.pathname.startsWith("/stream-log") ? "stream" : "acars";
 const BOOKS = {
   acars: { title: "Datalink log", other: ["/stream-log", "Stream log"], key: "pd-log",
-           cats: [["cpdlc", "CPDLC"], ["telex", "Telex"], ["weather", "Weather"], ["notice", "Notices"], ["other", "Other"]],
-           of: (e) => ["cpdlc", "telex", "weather", "notice"].includes(e.cat) ? e.cat : "other" },
+           cats: [["cpdlc", "CPDLC"], ["telex", "Telex"], ["weather", "Weather"], ["landing", "Landings"], ["notice", "Notices"], ["other", "Other"]],
+           of: (e) => ["cpdlc", "telex", "weather", "notice", "landing"].includes(e.cat) ? e.cat : "other" },
   stream: { title: "Stream log", other: ["/log", "Datalink log"], key: "pd-slog",
             cats: [["subs", "Subs"], ["bits", "Bits"], ["tips", "Tips"], ["raids", "Raids"], ["follows", "Follows"],
                    ["receipts", "Receipts"], ["unprinted", "Not printed"], ["missed", "While off"]],

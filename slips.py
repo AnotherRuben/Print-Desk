@@ -383,6 +383,80 @@ class Layouts:
             s.center(line)
         return s
 
+    def landing_report(self, rep: dict, info: dict | None = None, vref: int | None = None, when=None,
+                       parts: dict | None = None):
+        """A landing summary, framed like the other ACARS printouts."""
+        from datetime import datetime, timezone
+        info = info or {}
+        when = when or (datetime.fromtimestamp(rep["utc"], timezone.utc) if rep.get("utc") else datetime.now(timezone.utc))
+        parts = {"show_flare": True, "show_runway": True, "show_checks": True, "trace": False, "show_score": True,
+                 **(parts or {})}
+        actype = info.get("aircraft") or rep.get("type") or ""
+        callsign = info.get("callsign") or "-----"
+        reg = info.get("registration") or rep.get("acid") or ""
+        route = f"{info['origin']}-{info['destination']}" if info.get("origin") and info.get("destination") else ""
+        box = lambda title: s.center(f" {title} ".center(36, "-"))
+        s = Slip(f"Landing report {info.get('callsign', '')} {rep['score']}%".strip(), kind="sim")
+        box("ACARS")
+        s.center("LANDING REPORT", big=True)
+        s.kv(f"FLT: {callsign}", when.strftime("%H%MZ"), bold=True)
+        s.kv(f"ACID: {reg or '-----'}", when.strftime("%d%b%y").upper(), bold=True)
+        if actype or route:
+            s.kv(f"TYPE: {actype or '----'}", route, bold=True)
+        s.rule()
+        row = lambda label, value: s.text(f"{label:>18}  {value}")
+        fl = rep.get("flare")
+        if parts["show_flare"]:
+            s.text("AT FLARE (50 FT)", bold=True)
+            if fl and vref:
+                row("VREF DEV:", f"{fl['ias'] - vref:+d} KT")
+            if fl:
+                row("IAS:", f"{fl['ias']} KT")
+                row("SINK RATE:", f"{abs(fl['vs'])} FPM")
+            else:
+                row("", "NOT RECORDED")
+            s.blank()
+        s.text("AT TOUCHDOWN", bold=True)
+        row("RATE:", f"{abs(rep['vs'])} FPM")
+        row("G-LOAD:", f"{rep['g']:.2f} G")
+        row("PITCH:", f"{rep['pitch']:.1f} DEG")
+        row("BANK:", f"{rep['bank']:.1f} DEG")
+        row("CRAB:", f"{rep['crab']:.1f} DEG")
+        row("IAS / GS:", f"{rep['ias']} / {rep['gs']} KT")
+        if vref:
+            row("VREF:", f"{vref} KT")
+        rwy = rep.get("runway")
+        if parts.get("show_runway", True) and rwy:
+            side = "ON" if abs(rwy["cross"]) < 0.5 else ("RIGHT" if rwy["cross"] > 0 else "LEFT")
+            s.blank()
+            row("RUNWAY:", f"{rwy['airport']} {rwy['ident']}")
+            row("FROM THRESHOLD:", f"{rwy['from_threshold']} M / {round(rwy['from_threshold'] / 0.3048)} FT")
+            row("TOUCHDOWN ZONE:", {"IN": "IN", "LONG": "LONG", "SHORT": "SHORT (BEFORE THR)"}[rwy["tdz"]])
+            row("CENTRELINE:", "ON" if side == "ON" else f"{abs(rwy['cross']):.1f} M {side}")
+        if parts["show_checks"]:
+            s.blank()
+            row("TAIL STRIKE:", "TRUE" if rep["tail_strike"] else "FALSE")
+            row("WING STRIKE:", "TRUE" if rep["wing_strike"] else "FALSE")
+            row("BOUNCES:", str(rep["bounces"]))
+        if rep.get("touch_and_go"):
+            row("", "TOUCH AND GO")
+        if parts["trace"] and rep.get("trace"):
+            s.rule().text("LAST SECONDS", bold=True)
+            s.text(f"{'SEC':>4} {'AGL':>5} {'IAS':>4} {'V/S':>6} {'PITCH':>6} {'BANK':>5} {'G':>5}")
+            for r in rep["trace"]:
+                mark = "TD" if r["s"] == 0 else f"{r['s']:+d}"
+                s.text(f"{mark:>4} {r['agl']:>5} {r['ias']:>4} {r['vs']:>6} {r['pitch']:>6.1f} {r['bank']:>5.1f} {r['g']:>5.2f}")
+        notes = rep.get("remarks") or []
+        if parts.get("show_remarks", True) and notes and rep["score"] < float(parts.get("remarks_below", 80)):
+            s.rule().text("REMARKS", bold=True)
+            for i, n in enumerate(notes, 1):
+                for j, line in enumerate(textwrap.wrap(n, 44)):
+                    s.text(f"{str(i) + '.' if j == 0 else '':<3} {line}")
+        if parts["show_score"]:
+            s.rule().center(f"LANDING SCORE: {rep['score']}%", bold=True)
+        box("END")
+        return s
+
     def picture_test(self, name, avatar, note=""):
         """A real profile picture (or a photo) on a slip, to judge how it prints."""
         s = Slip(f"Picture test: {name}", kind="manual")

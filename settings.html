@@ -335,6 +335,37 @@
     <label class="check"><input type="checkbox" id="arrival.print"><span>Print the arrival weather automatically<small>Off: only in the datalink log, print it from there</small></span></label>
   </section>
 
+  <section class="card" id="s-landing">
+    <h2>Landing report</h2>
+    <p class="lead">After every landing in MSFS (2020 or 2024): sink rate, G, pitch, bank and crab at touchdown, bounces and a score, read straight from the sim through SimConnect. Type your Vref in the panel's Landing tile to see the deviation at the flare. Windows only; in the datalink log either way.</p>
+    <label class="check"><input type="checkbox" id="landing.enabled"><span>Record landings<small>Connects to MSFS while it's running</small></span></label>
+    <div class="field"><label class="l" for="landing.when">When</label>
+      <select id="landing.when">
+        <option value="flight">Only during a flight (after "Start flight from SimBrief")</option>
+        <option value="always">Every landing in MSFS</option>
+      </select></div>
+    <label class="check"><input type="checkbox" id="landing.auto_print"><span>Print the report by itself<small>Off: only in the datalink log</small></span></label>
+    <div class="field">
+      <label class="l">On the slip</label>
+      <label class="check"><input type="checkbox" id="landing.show_flare"><span>At the flare<small>Speed and sink rate at 50 ft, and the Vref deviation</small></span></label>
+      <label class="check"><input type="checkbox" id="landing.show_runway"><span>Runway, touchdown zone and centreline<small>Distance past the threshold and off the centreline, from OurAirports runway data</small></span></label>
+      <label class="check"><input type="checkbox" id="landing.show_checks"><span>Strikes and bounces<small>Tail strike, wing/pod strike, number of bounces</small></span></label>
+      <label class="check"><input type="checkbox" id="landing.trace"><span>Second-by-second table<small>The last 10 seconds before touchdown and 3 after</small></span></label>
+      <label class="check"><input type="checkbox" id="landing.show_remarks"><span>Remarks when the score is low<small>Up to three points to work on, most important first</small></span></label>
+      <label class="check"><input type="checkbox" id="landing.show_score"><span>Landing score<small>Out of 100</small></span></label>
+      <div class="hint">The touchdown values are always on it.</div>
+    </div>
+    <div class="row3">
+      <div class="field"><label class="l" for="landing.print_below_kts">Print below (knots)</label><input type="number" id="landing.print_below_kts"></div>
+      <div class="field"><label class="l" for="landing.tail_strike_pitch">Tail strike from (pitch, deg)</label><input type="number" step="any" id="landing.tail_strike_pitch"><div class="hint">Differs per type; about 10 suits most airliners</div></div>
+      <div class="field"><label class="l" for="landing.wing_strike_bank">Wing/pod strike from (bank, deg)</label><input type="number" step="any" id="landing.wing_strike_bank"></div>
+    </div>
+    <div class="row2">
+      <div class="field"><label class="l" for="landing.remarks_below">Remarks below score (%)</label><input type="number" id="landing.remarks_below"></div>
+      <div class="field"><label class="l" for="landing.max_rate_fpm">Hard landing above (fpm)</label><input type="number" id="landing.max_rate_fpm"><div class="hint">The manufacturer's limit; about 600 fpm for most airliners</div></div>
+    </div>
+  </section>
+
   <section class="card" id="s-autopause">
     <h2>Auto-pause in busy flight phases</h2>
     <p class="lead">Switched on and off on the main page. During a flight, stream printing pauses from taxi until you climb through the altitude below, and again from 500 ft under it until you're parked, with one receipt each time it resumes. Uses your position on VATSIM, every 15 seconds. Press Pause yourself for pushback; it takes that over at taxi.</p>

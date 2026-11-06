@@ -7,7 +7,7 @@ if errorlevel 1 (
   call "%~dp0install.bat"
   exit /b
 )
-%PY% -c "import aiohttp, PIL" >nul 2>nul
+%PY% -c "import importlib.util as u, sys; sys.exit(0 if all(u.find_spec(m) for m in ('aiohttp', 'PIL', 'SimConnect')) else 1)" >nul 2>nul
 if errorlevel 1 (
   echo   First start: installing the libraries Print Desk needs...
   %PY% -m pip install --disable-pip-version-check -r requirements.txt

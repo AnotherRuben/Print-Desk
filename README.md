@@ -33,7 +33,8 @@ networks if you want to use the panel from your phone.
 
 **Updating:** download the new version and copy its files over your folder. Your settings
 (`config.toml`) and Twitch login (`twitch_tokens.json`) stay, because they're not part of
-the download. Run `install.bat` again in case something new is needed.
+the download. Every time you save in Settings, the previous settings are kept as
+`config.backup.toml`: rename it to `config.toml` to go back. Run `install.bat` again in case something new is needed.
 
 ## What prints
 
@@ -128,6 +129,36 @@ Print Desk takes the ATC callsign and airports from your latest OFP and, until y
 Print Desk never sends anything on Hoppie and checks only every 45-75 seconds
 (briefly every ~25 seconds while waiting for a reply), as Hoppie asks.
 
+## Landing report
+
+After every landing in MSFS 2020 or 2024 during a flight (after *Start flight from SimBrief*;
+Settings › Landing report › *When* can make it every landing), Print Desk prints a landing
+summary once you've slowed below 40 knots:
+
+- **At the flare** (50 ft): airspeed, sink rate and, if you typed your Vref in the panel's
+  *Landing* tile, the deviation from it.
+- **At touchdown**: sink rate (the sim's own touchdown value), G, pitch, bank, crab, airspeed
+  and groundspeed, plus tail strike, wing/pod strike and bounces.
+- **Runway**: which runway, how far past the threshold you touched down, whether that was in
+  the touchdown zone (the first 900 m, or a third of shorter runways), and how far off the
+  centreline. Uses the aircraft's position from MSFS and free runway data from OurAirports,
+  downloaded once into `runways.csv` and refreshed monthly. Scenery can differ a little from
+  the real world, so a metre or two is normal.
+- **Last seconds** (off by default): a second-by-second table from 10 s before touchdown to 3 s after.
+- A **landing score** out of 100: an open, simple formula (sink rate, G, bank, crab, bounces,
+  touchdown zone and centreline).
+- **Remarks** when the score is below 80%: up to three things to work on, most important first.
+  Safety and maintenance events lead (tail or wing strike, a landing above the manufacturer's
+  sink-rate limit, 600 fpm by default, and bounces), then touchdown zone, centreline, G, a firm
+  sink rate, and finally crab, bank and flare speed.
+
+The data comes straight from the sim through SimConnect, MSFS's own add-on interface, read
+about 20 times a second; nothing to install in MSFS. Windows only. Reports also go into the
+datalink log (filter *Landings*), and *Print last* in the panel prints the latest again.
+Settings › Landing report has the print speed, a switch for each part of the slip, and the tail/wing strike limits
+(they differ per aircraft; about 10 degrees pitch suits most airliners).
+`printdesk test landing` prints a made-up one.
+
 ## Auto-pause in busy flight phases
 
 The switch under the main buttons. During a flight (and while you're on VATSIM) stream
@@ -153,6 +184,7 @@ printdesk test all        fake stream events, nobody pays
 printdesk test hype       just a hype train
 printdesk test follow     follows, including a follow-bot flood
 printdesk test youtube    members, gifted memberships, Super Chats, a new subscriber
+printdesk test landing    a landing report from a made-up approach
 printdesk picture yourname friend_name       real Twitch profile pictures on a test slip
 printdesk picture "C:\Photos\me.jpg"            any picture file on a test slip
 printdesk ofp             print your latest SimBrief OFP (same as print_ofp.bat)
