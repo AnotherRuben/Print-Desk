@@ -383,11 +383,13 @@ class Layouts:
             s.center(line)
         return s
 
-    def landing_report(self, rep: dict, info: dict | None = None, vref: int | None = None, when=None):
+    def landing_report(self, rep: dict, info: dict | None = None, vref: int | None = None, when=None,
+                       parts: dict | None = None):
         """A landing summary, in the style of an airline's flight data printout."""
         from datetime import datetime, timezone
         info = info or {}
         when = when or datetime.now(timezone.utc)
+        parts = {"show_flare": True, "show_checks": True, "trace": False, "show_score": True, **(parts or {})}
         actype = info.get("aircraft") or rep.get("type") or ""
         s = Slip(f"Landing report {info.get('callsign', '')} {rep['score']}%".strip(), kind="sim")
         s.text(f"{actype + ' ' if actype else ''}LANDING SUMMARY REPORT", bold=True).blank()
@@ -400,15 +402,16 @@ class Layouts:
         s.blank()
         row = lambda label, value: s.text(f"{label:>18}  {value}")
         fl = rep.get("flare")
-        s.text("***AT FLARE (50 FT)***", bold=True)
-        if fl and vref:
-            row("VREF DEV:", f"{fl['ias'] - vref:+d} KNOTS")
-        if fl:
-            row("IAS:", f"{fl['ias']} KNOTS")
-            row("SINK RATE:", f"{abs(fl['vs'])} FPM")
-        else:
-            row("", "NOT RECORDED")
-        s.blank()
+        if parts["show_flare"]:
+            s.text("***AT FLARE (50 FT)***", bold=True)
+            if fl and vref:
+                row("VREF DEV:", f"{fl['ias'] - vref:+d} KNOTS")
+            if fl:
+                row("IAS:", f"{fl['ias']} KNOTS")
+                row("SINK RATE:", f"{abs(fl['vs'])} FPM")
+            else:
+                row("", "NOT RECORDED")
+            s.blank()
         s.text("***AT TOUCHDOWN***", bold=True)
         row("RATE:", f"{abs(rep['vs'])} FPM")
         row("G-LOAD:", f"{rep['g']:.2f} G")
@@ -418,21 +421,23 @@ class Layouts:
         row("IAS / GS:", f"{rep['ias']} / {rep['gs']} KNOTS")
         if vref:
             row("VREF:", f"{vref} KNOTS")
-        s.blank()
-        row("TAIL STRIKE:", "TRUE" if rep["tail_strike"] else "FALSE")
-        row("WING STRIKE:", "TRUE" if rep["wing_strike"] else "FALSE")
-        row("BOUNCES:", str(rep["bounces"]))
+        if parts["show_checks"]:
+            s.blank()
+            row("TAIL STRIKE:", "TRUE" if rep["tail_strike"] else "FALSE")
+            row("WING STRIKE:", "TRUE" if rep["wing_strike"] else "FALSE")
+            row("BOUNCES:", str(rep["bounces"]))
         if rep.get("touch_and_go"):
             row("", "TOUCH AND GO")
-        if rep.get("trace"):
+        if parts["trace"] and rep.get("trace"):
             s.blank().text("***LAST SECONDS***", bold=True)
             s.text(f"{'SEC':>4} {'AGL':>5} {'IAS':>4} {'V/S':>6} {'PITCH':>6} {'BANK':>5} {'G':>5}")
             for r in rep["trace"]:
                 mark = "TD" if r["s"] == 0 else f"{r['s']:+d}"
                 s.text(f"{mark:>4} {r['agl']:>5} {r['ias']:>4} {r['vs']:>6} {r['pitch']:>6.1f} {r['bank']:>5.1f} {r['g']:>5.2f}")
         s.blank()
-        s.center(f"LANDING SCORE: {rep['score']}%", big=True)
-        s.blank()
+        if parts["show_score"]:
+            s.center(f"LANDING SCORE: {rep['score']}%", big=True)
+            s.blank()
         d, t = stamp()
         s.kv(d, t)
         return s

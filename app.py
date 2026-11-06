@@ -215,8 +215,7 @@ class App:
         info = dict(self.flight.info or {})
         if not info.get("registration") and self.sim_acid:
             info["registration"] = self.sim_acid
-        shown = rep if lcfg.get("trace", True) else {**rep, "trace": []}
-        slip = Layouts(self.cfg).landing_report(shown, info, vref=self.flight.vref)
+        slip = Layouts(self.cfg).landing_report(rep, info, vref=self.flight.vref, parts=lcfg)
         entry = await self.flight.file(slip, "landing")
         self.last_landing = {"n": entry["n"], "vs": abs(rep["vs"]), "g": rep["g"], "score": rep["score"],
                              "bounces": rep["bounces"], "time": time.strftime("%H:%M")}

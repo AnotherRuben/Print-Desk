@@ -70,7 +70,7 @@ async def one_shot(args, cfg, http):
             w.feed(r)
         info = {"callsign": "DEMO123", "origin": "EHAM", "destination": "EGLL", "aircraft": "A320",
                 "registration": "PH-DSK"}
-        await dispatcher.emit(Layouts(cfg).landing_report(got[0], info, vref=134))
+        await dispatcher.emit(Layouts(cfg).landing_report(got[0], info, vref=134, parts=cfg.get("landing", {})))
     elif args.scenario == "slip":
         from avatars import DemoAvatars
         pic = await DemoAvatars().get(login="Print Desk") if cfg["avatars"].get("enabled") else None
