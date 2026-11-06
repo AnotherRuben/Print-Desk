@@ -1,5 +1,6 @@
 # Your own settings, logins and history: never commit these
 config.toml
+config.backup.toml
 twitch_tokens.json
 *.jsonl
 *.log

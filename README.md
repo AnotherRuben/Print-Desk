@@ -33,7 +33,8 @@ networks if you want to use the panel from your phone.
 
 **Updating:** download the new version and copy its files over your folder. Your settings
 (`config.toml`) and Twitch login (`twitch_tokens.json`) stay, because they're not part of
-the download. Run `install.bat` again in case something new is needed.
+the download. Every time you save in Settings, the previous settings are kept as
+`config.backup.toml`: rename it to `config.toml` to go back. Run `install.bat` again in case something new is needed.
 
 ## What prints
 

@@ -199,6 +199,11 @@ def save(path: Path, cfg: dict):
     tomllib.loads(text)                     # never write a file we can't read back
     tmp = path.with_suffix(".tmp")
     tmp.write_text(text, encoding="utf-8")
+    if path.exists() and path.read_text(encoding="utf-8", errors="ignore") != text:
+        try:                                # the previous settings, in case something goes wrong
+            path.replace(path.with_name("config.backup.toml"))
+        except OSError:
+            pass
     tmp.replace(path)
 
 
