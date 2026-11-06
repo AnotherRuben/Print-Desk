@@ -388,7 +388,7 @@ class Layouts:
         """A landing summary, framed like the other ACARS printouts."""
         from datetime import datetime, timezone
         info = info or {}
-        when = when or datetime.now(timezone.utc)
+        when = when or (datetime.fromtimestamp(rep["utc"], timezone.utc) if rep.get("utc") else datetime.now(timezone.utc))
         parts = {"show_flare": True, "show_checks": True, "trace": False, "show_score": True, **(parts or {})}
         actype = info.get("aircraft") or rep.get("type") or ""
         callsign = info.get("callsign") or "-----"

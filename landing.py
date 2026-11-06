@@ -19,6 +19,7 @@ A reading is a dict with:
 """
 from __future__ import annotations
 
+import time as _time
 from collections import deque
 
 AIRBORNE_FOR = 10.0          # seconds in the air before a touchdown counts (not at load-in)
@@ -115,6 +116,7 @@ class LandingWatcher:
         """air: the last reading in the air; ground: the first on the ground."""
         self.td = {
             "t": ground["t"],
+            "utc": _time.time(),                        # the clock time of touchdown, for the header
             "vs": air["vs"], "ias": air["ias"], "gs": air["gs"],
             "pitch": air["pitch"], "bank": air["bank"],
             "crab": _angle(air["hdg"] - air["trk"]) if air["gs"] > 30 else 0.0,
@@ -154,7 +156,7 @@ class LandingWatcher:
             "vs": round(vs), "g": round(td["g"], 2),
             "pitch": round(td["pitch"], 1), "bank": round(td["bank"], 1), "crab": round(td["crab"], 1),
             "ias": round(td["ias"]), "gs": round(td["gs"]),
-            "bounces": td["bounces"], "touch_and_go": td["touch_and_go"],
+            "bounces": td["bounces"], "touch_and_go": td["touch_and_go"], "utc": td["utc"],
             "flare": {k: round(v) for k, v in td["flare"].items()} if td["flare"] else None,
             "tail_strike": td["pitch"] >= tail,
             "wing_strike": abs(td["bank"]) >= wing,
