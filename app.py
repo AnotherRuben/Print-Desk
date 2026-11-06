@@ -226,6 +226,8 @@ class App:
             except Exception as e:
                 log.info("runway lookup: %s", e)
             rep["score"] = score(rep)
+        from landing import remarks
+        rep["remarks"] = remarks(rep, self.flight.vref, lcfg)
         if not info.get("registration") and self.sim_acid:
             info["registration"] = self.sim_acid
         slip = Layouts(self.cfg).landing_report(rep, info, vref=self.flight.vref, parts=lcfg)

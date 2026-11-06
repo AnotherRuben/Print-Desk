@@ -446,6 +446,12 @@ class Layouts:
             for r in rep["trace"]:
                 mark = "TD" if r["s"] == 0 else f"{r['s']:+d}"
                 s.text(f"{mark:>4} {r['agl']:>5} {r['ias']:>4} {r['vs']:>6} {r['pitch']:>6.1f} {r['bank']:>5.1f} {r['g']:>5.2f}")
+        notes = rep.get("remarks") or []
+        if parts.get("show_remarks", True) and notes and rep["score"] < float(parts.get("remarks_below", 80)):
+            s.rule().text("REMARKS", bold=True)
+            for i, n in enumerate(notes, 1):
+                for j, line in enumerate(textwrap.wrap(n, 44)):
+                    s.text(f"{str(i) + '.' if j == 0 else '':<3} {line}")
         if parts["show_score"]:
             s.rule().center(f"LANDING SCORE: {rep['score']}%", bold=True)
         box("END")

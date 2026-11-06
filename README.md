@@ -146,6 +146,10 @@ summary once you've slowed below 40 knots:
 - **Last seconds** (off by default): a second-by-second table from 10 s before touchdown to 3 s after.
 - A **landing score** out of 100: an open, simple formula (sink rate, G, bank, crab, bounces,
   touchdown zone and centreline).
+- **Remarks** when the score is below 80%: up to three things to work on, most important first.
+  Safety and maintenance events lead (tail or wing strike, a landing above the manufacturer's
+  sink-rate limit, 600 fpm by default, and bounces), then touchdown zone, centreline, G, a firm
+  sink rate, and finally crab, bank and flare speed.
 
 The data comes straight from the sim through SimConnect, MSFS's own add-on interface, read
 about 20 times a second; nothing to install in MSFS. Windows only. Reports also go into the

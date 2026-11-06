@@ -60,6 +60,48 @@ def score(rep: dict) -> int:
     return int(max(0, min(100, round(s))))
 
 
+def remarks(rep: dict, vref: int | None = None, cfg: dict | None = None, most: int = 3) -> list[str]:
+    """What to work on, most important first: safety and maintenance events, then
+    touchdown zone, centreline, G, sink rate, and the finer points."""
+    cfg = cfg or {}
+    limit = float(cfg.get("max_rate_fpm", 600))
+    vs, out = abs(rep["vs"]), []
+    rwy = rep.get("runway")
+    if rep["tail_strike"]:
+        out.append(f"TAIL STRIKE AT {rep['pitch']:.1f} DEG PITCH: DON'T OVER-FLARE, KEEP THE SPEED UP TO TOUCHDOWN")
+    if rep["wing_strike"]:
+        out.append(f"WING/POD STRIKE AT {abs(rep['bank']):.1f} DEG BANK: WINGS LEVEL BEFORE TOUCHDOWN")
+    if vs > limit:
+        out.append(f"HARD LANDING: {vs:.0f} FPM IS ABOVE THE {limit:.0f} FPM LIMIT. STABILISE EARLIER, START THE FLARE AROUND 30 FT")
+    if rep["bounces"]:
+        out.append("BOUNCED: HOLD THE ATTITUDE AFTER TOUCHDOWN, DON'T PULL BACK")
+    if rwy and rwy["tdz"] == "LONG":
+        out.append(f"TOUCHED DOWN {rwy['from_threshold']} M IN, PAST THE TOUCHDOWN ZONE: AIM FOR THE AIMING POINT, DON'T FLOAT")
+    if rwy and rwy["tdz"] == "SHORT":
+        out.append("TOUCHED DOWN BEFORE THE THRESHOLD: STAY ON THE GLIDEPATH DOWN TO 50 FT")
+    if rwy and abs(rwy["cross"]) > 3:
+        side = "RIGHT" if rwy["cross"] > 0 else "LEFT"
+        out.append(f"{abs(rwy['cross']):.1f} M {side} OF THE CENTRELINE: LINE UP EARLIER ON FINAL, SMALL CORRECTIONS")
+    if rep["g"] > 1.4:
+        out.append(f"{rep['g']:.2f} G: FIRM. REDUCE THE SINK RATE GRADUALLY IN THE FLARE")
+    if 240 < vs <= limit:
+        out.append(f"{vs:.0f} FPM: FIRM BUT WITHIN LIMITS. START THE FLARE A LITTLE EARLIER")
+    if vs < 60:
+        out.append(f"{vs:.0f} FPM: FLOATED. LET IT SETTLE IN THE TOUCHDOWN ZONE")
+    if abs(rep["crab"]) > 3:
+        out.append(f"{abs(rep['crab']):.1f} DEG CRAB AT TOUCHDOWN: DE-CRAB WITH RUDDER IN THE FLARE")
+    if abs(rep["bank"]) > 2 and not rep["wing_strike"]:
+        out.append(f"{abs(rep['bank']):.1f} DEG BANK AT TOUCHDOWN: KEEP THE WINGS LEVEL")
+    fl = rep.get("flare")
+    if fl and vref:
+        dev = fl["ias"] - vref
+        if dev > 10:
+            out.append(f"VREF{dev:+d} AT 50 FT: FAST. FLY THE APPROACH CLOSER TO VAPP")
+        elif dev < -5:
+            out.append(f"VREF{dev:+d} AT 50 FT: SLOW. KEEP THE SPEED UP TO THE FLARE")
+    return out[:most]
+
+
 class LandingWatcher:
     def __init__(self, on_report, cfg: dict | None = None):
         self.on_report = on_report
