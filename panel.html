@@ -401,7 +401,7 @@ function renderFlight(f) {
   const listed = f.aircraft && (f.listed || []).includes(f.aircraft.type);
   const ms = f.msfs || {}, ld = f.landing;
   $("ld-lamp").className = "lamp" + (ms.level === "ok" ? " ok" : ms.level === "error" ? " error" : "");
-  $("ld-text").textContent = ld ? `${ld.vs} fpm, ${ld.g.toFixed(2)} G - ${ld.score}%` : (ms.detail || "MSFS: not connected").replace(/^MSFS: /, "MSFS ");
+  $("ld-text").textContent = ld ? `${ld.vs} fpm, ${ld.g.toFixed(2)} G - ${ld.score}%` : (ms.detail || "MSFS / X-Plane: not connected").replace(/^(MSFS|X-Plane[^:]*): /, "$1 ");
   $("ld-sub").textContent = ld ? `Landed ${ld.time}${ld.bounces ? `, ${ld.bounces} bounce${ld.bounces > 1 ? "s" : ""}` : ""}. Prints below 40 kt.`
                                 : "Report prints after landing, once below 40 kt." + (f.vref ? ` Vref ${f.vref} kt.` : "");
   if (document.activeElement !== $("vref")) $("vref").value = f.vref || "";

@@ -82,6 +82,7 @@ class App:
         self.landing = LandingWatcher(self._on_landing, self.cfg.get("landing", {}))
         self.runways = Runways(HERE / "runways.csv", self.http)
         self.sim = None                                 # the MSFS reader (Windows only)
+        self.xp = None                                  # the X-Plane reader
         self.sim_acid = ""                              # the aircraft's ATC ID, from the sim
         self.last_landing = None
         self.login_task: asyncio.Task | None = None
@@ -195,15 +196,32 @@ class App:
     # ------------------------------------------------------------ landing reports
 
     def start_sim(self):
-        if self.sim:
-            self.sim.stop()
-            self.sim = None
-        if not self.cfg.get("landing", {}).get("enabled", True):
+        for s in (self.sim, self.xp):
+            if s:
+                s.stop()
+        self.sim = self.xp = None
+        lcfg = self.cfg.get("landing", {})
+        if not lcfg.get("enabled", True):
             self.state.status("msfs", "off", "MSFS: landing reports switched off")
+            self.state.status("xplane", "off", "X-Plane: landing reports switched off")
             return
-        from simconnect_source import SimSource
-        self.sim = SimSource(asyncio.get_running_loop(), self.landing.feed, self._status("msfs"), self._sim_info)
-        self.sim.start()
+        loop = asyncio.get_running_loop()
+        if lcfg.get("msfs", True):
+            from simconnect_source import SimSource
+            self.sim = SimSource(loop, self.landing.feed, self._status("msfs"), self._sim_info)
+            self.sim.start()
+        else:
+            self.state.status("msfs", "off", "MSFS: switched off in Settings")
+        if lcfg.get("xplane", True):
+            from xplane_source import XPlaneSource
+            self.xp = XPlaneSource(loop, self.landing.feed, self._status("xplane"), self._sim_info, lcfg, self.http)
+            self.xp.start()
+        else:
+            self.state.status("xplane", "off", "X-Plane: switched off in Settings")
+
+    def active_sim(self):
+        """The sim that's sending readings now (X-Plane if it's connected, else MSFS)."""
+        return self.xp if self.xp and self.xp.connected else self.sim
 
     def _sim_info(self, info):
         self.sim_acid = info.get("acid") or self.sim_acid
@@ -223,13 +241,14 @@ class App:
             try:
                 airports = (info.get("destination"), info.get("origin"), info.get("alternate"))
                 await self.runways.ensure()
-                rep["runway"] = (await self.runways.find_in_sim(self.sim, rep["lat"], rep["lon"], rep["trk"], airports)
+                rep["runway"] = (await self.runways.find_in_sim(self.active_sim(), rep["lat"], rep["lon"], rep["trk"], airports)
                                  or await self.runways.find(rep["lat"], rep["lon"], rep["trk"], airports))
             except Exception as e:
                 log.info("runway lookup: %s", e)
             rep["score"] = score(rep)
         from landing import remarks
         rep["remarks"] = remarks(rep, self.flight.vref, lcfg)
+        rep["low_rate"] = bool(getattr(self.active_sim(), "low_rate", False))
         if not info.get("registration") and self.sim_acid:
             info["registration"] = self.sim_acid
         slip = Layouts(self.cfg).landing_report(rep, info, vref=self.flight.vref, parts=lcfg)
@@ -253,6 +272,7 @@ class App:
     async def update_config(self, incoming: dict) -> list[str]:
         """Called by the settings page. Saves, then applies only what changed."""
         new = config_io.apply_update(self.cfg, incoming)
+        self.cfg_before_landing = dict(self.cfg.get("landing", {}))
         changed = config_io.changed_sections(self.cfg, new)
         if not changed:
             return ["Nothing changed."]
@@ -271,7 +291,8 @@ class App:
                 done.append(f"{SOURCES[name]} reconnected.")
         if "landing" in changed:
             self.landing.configure(new.get("landing", {}))
-            if new.get("landing", {}).get("enabled", True) != bool(self.sim):
+            keys = ("enabled", "msfs", "xplane", "xplane_host", "xplane_port", "xplane_folder")
+            if any(self.cfg_before_landing.get(k) != new.get("landing", {}).get(k) for k in keys):
                 self.start_sim()
             done.append("Landing reports updated.")
         if "panel" in changed:

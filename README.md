@@ -131,7 +131,7 @@ Print Desk never sends anything on Hoppie and checks only every 45-75 seconds
 
 ## Landing report
 
-After every landing in MSFS 2020 or 2024 during a flight (after *Start flight from SimBrief*;
+After every landing in MSFS 2020 or 2024, or X-Plane 11 or 12, during a flight (after *Start flight from SimBrief*;
 Settings › Landing report › *When* can make it every landing), Print Desk prints a landing
 summary once you've slowed below 40 knots:
 
@@ -157,8 +157,9 @@ summary once you've slowed below 40 knots:
   sink-rate limit, 600 fpm by default, and bounces), then touchdown zone, centreline, G, a firm
   sink rate, and finally crab, bank and flare speed.
 
-The data comes straight from the sim through SimConnect, MSFS's own add-on interface, read
-every sim frame; nothing to install in MSFS. Windows only. Reports also go into the
+The data comes straight from the sim: in MSFS through SimConnect, its own add-on interface, read
+every sim frame (Windows only); in X-Plane through its network data, see below. Nothing to
+install in either sim. Reports also go into the
 datalink log (filter *Landings*), and *Print last* in the panel prints the latest again.
 Settings › Landing report has the print speed, a switch for each part of the slip, and the tail/wing strike limits
 (they differ per aircraft; about 10 degrees pitch suits most airliners).
@@ -171,6 +172,17 @@ on *Developer Mode* (Options > General > Developers), then in the developer menu
 Print Desk once). You can also copy `SimConnect.dll` from the SDK's `SimConnect SDK\lib` folder
 into the Print Desk folder. The panel's MSFS status says "runways from OurAirports" while the old
 DLL is in use.
+
+**X-Plane 11 and 12:** Print Desk asks X-Plane for its data 50 times a second over UDP, the
+network data X-Plane has built in. X-Plane 11 has it on by default. In X-Plane 12 switch on
+*Settings › Network › Accept incoming connections*. If UDP gets no answer, X-Plane 12.1.1 and newer
+are read through X-Plane's Web API instead; that only sends 10 readings a second, so the report
+says the touchdown values are less exact. Runways come from X-Plane's own airport files (your
+Custom Scenery first, then the global airports), so they match the scenery you fly. Print Desk
+finds the X-Plane folder by itself; if not, set it in Settings › Landing report. X-Plane on
+another PC: set its address there too (the runway files then need the folder shared, or the
+report falls back to OurAirports). X-Plane has no touchdown sink rate of its own, so Print Desk
+measures it from the last readings before the wheels touch.
 
 ## Auto-pause in busy flight phases
 

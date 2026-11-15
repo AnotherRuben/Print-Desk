@@ -191,15 +191,21 @@ class Runways:
         facilities functions, see simconnect_source.py). None if that isn't available."""
         if not sim or not getattr(sim, "facilities", False):
             return None
+        if lat is None or lon is None:
+            return None
         tried = []
         for icao in [a.upper() for a in airports if a] + self.nearby_airports(lat, lon):
             if icao in tried or len(tried) >= 4:
                 continue
             tried.append(icao)
-            rwys = await sim.airport_runways(icao)
-            if not rwys:
+            if hasattr(sim, "runway_ends"):                # X-Plane: straight from its apt.dat
+                all_ends = await sim.runway_ends(icao)
+            else:                                           # MSFS: centre, heading, length
+                rwys = await sim.airport_runways(icao)
+                all_ends = sim_ends(icao, rwys, self.displaced(icao)) if rwys else None
+            if not all_ends:
                 continue
-            hit = match_ends(sim_ends(icao, rwys, self.displaced(icao)), lat, lon, track)
+            hit = match_ends(all_ends, lat, lon, track)
             if hit:
                 hit["source"] = "SCENERY"
                 return hit
