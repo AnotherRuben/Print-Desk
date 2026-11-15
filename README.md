@@ -173,7 +173,7 @@ Print Desk once). You can also copy `SimConnect.dll` from the SDK's `SimConnect 
 into the Print Desk folder. The panel's MSFS status says "runways from OurAirports" while the old
 DLL is in use.
 
-**X-Plane 11 and 12:** Print Desk asks X-Plane for its data 50 times a second over UDP, the
+**X-Plane 11 and 12 (experimental, not tested on a real X-Plane yet; please report what you see):** Print Desk asks X-Plane for its data 50 times a second over UDP, the
 network data X-Plane has built in. X-Plane 11 has it on by default. In X-Plane 12 switch on
 *Settings › Network › Accept incoming connections*. If UDP gets no answer, X-Plane 12.1.1 and newer
 are read through X-Plane's Web API instead; that only sends 10 readings a second, so the report

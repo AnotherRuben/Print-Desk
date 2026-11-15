@@ -1,4 +1,5 @@
-"""Reads the aircraft from X-Plane 11 or 12, for landing reports.
+"""Reads the aircraft from X-Plane 11 or 12, for landing reports. EXPERIMENTAL: only
+tested against a fake X-Plane so far.
 
 Nothing to install in X-Plane. Two ways in, tried in this order:
 
