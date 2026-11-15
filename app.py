@@ -221,8 +221,10 @@ class App:
         if rep.get("lat") is not None:
             from landing import score
             try:
-                rep["runway"] = await self.runways.find(rep["lat"], rep["lon"], rep["trk"],
-                                                        (info.get("destination"), info.get("origin"), info.get("alternate")))
+                airports = (info.get("destination"), info.get("origin"), info.get("alternate"))
+                await self.runways.ensure()
+                rep["runway"] = (await self.runways.find_in_sim(self.sim, rep["lat"], rep["lon"], rep["trk"], airports)
+                                 or await self.runways.find(rep["lat"], rep["lon"], rep["trk"], airports))
             except Exception as e:
                 log.info("runway lookup: %s", e)
             rep["score"] = score(rep)
