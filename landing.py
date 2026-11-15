@@ -1,6 +1,6 @@
 """Landing reports: recognises a landing in the sim readings and sums it up.
 
-LandingWatcher gets a reading about 15 times a second (see simconnect_source.py)
+LandingWatcher gets a reading every sim frame (see simconnect_source.py)
 and calls on_report with a dict once the aircraft has landed and slowed below
 the print speed. It knows nothing about SimConnect, so it can be tested with
 made-up readings.
@@ -26,7 +26,9 @@ from collections import deque
 AIRBORNE_FOR = 10.0          # seconds in the air before a touchdown counts (not at load-in)
 TRACE_BEFORE = 10            # seconds of approach in the second-by-second table
 TRACE_AFTER = 3              # and after touchdown
-G_WINDOW = 1.5               # seconds after touchdown to look for the G peak
+G_WINDOW = 1.5               # seconds after touchdown before the report can finish
+G_CONTACT = 0.25             # the touchdown G: the first quarter second on the wheels...
+G_SMOOTH = 0.1               # ...the median over this long, so one spiky frame doesn't count
 BOUNCE_AGL = 1.0             # feet: off the ground again by more than this is a bounce
 
 
@@ -102,6 +104,19 @@ def remarks(rep: dict, vref: int | None = None, cfg: dict | None = None, most: i
     return out[:most]
 
 
+def contact_g(samples) -> float:
+    """The G as the wheels touch: the highest short median in the first moment on the
+    ground. Later peaks (nose gear, spoilers, the gear springing back) don't count,
+    which is how other landing apps measure it too."""
+    if not samples:
+        return 1.0
+    best = 0.0
+    for i, (t0, _) in enumerate(samples):
+        win = sorted(g for t, g in samples[i:] if t - t0 <= G_SMOOTH)
+        best = max(best, win[len(win) // 2])           # the median: a single spiky frame drops out
+    return best
+
+
 class LandingWatcher:
     def __init__(self, on_report, cfg: dict | None = None):
         self.on_report = on_report
@@ -152,8 +167,8 @@ class LandingWatcher:
             self.air_since = None
             return
         self.bouncing = False
-        if r["t"] - self.td["t"] <= G_WINDOW:
-            self.td["g"] = max(self.td["g"], r["g"])
+        if r["t"] - self.td["t"] <= G_CONTACT:
+            self.td["g_samples"].append((r["t"], r["g"]))
         if r.get("td_vs") and self.td.get("sim_vs_before") != r["td_vs"]:
             self.td["sim_vs"] = r["td_vs"]                      # the sim's own touchdown value, once updated
         below = float(self.cfg.get("print_below_kts", 40))
@@ -169,7 +184,7 @@ class LandingWatcher:
             "vs": air["vs"], "ias": air["ias"], "gs": air["gs"],
             "pitch": air["pitch"], "bank": air["bank"],
             "crab": _angle(air["hdg"] - air["trk"]) if air["gs"] > 30 else 0.0,
-            "g": max(air["g"], ground["g"]),
+            "g_samples": [(ground["t"], ground["g"])],
             "bounces": 0, "touch_and_go": False,
             "flare": self.flare,
             "sim_vs_before": air.get("td_vs"),          # the sim's value from the previous landing
@@ -195,6 +210,7 @@ class LandingWatcher:
         if td is None:
             return
         trace = self._trace(td["t"])
+        td["g"] = contact_g(td["g_samples"])
         vs = td["vs"]
         sim_vs = td.get("sim_vs")
         if sim_vs and 0 < abs(sim_vs) < 3000:              # more precise than our own reading

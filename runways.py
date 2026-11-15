@@ -1,6 +1,8 @@
 """Runways, for touchdown zone and centreline on the landing report.
 
-Uses runways.csv from OurAirports (free, worldwide, every runway end with its
+First choice is the sim's own runway data (the scenery you're actually flying,
+add-on airports included), when the SimConnect.dll in use has the facilities
+functions. Otherwise, or if the sim doesn't answer, it uses runways.csv from OurAirports (free, worldwide, every runway end with its
 position, true heading, length, width and displaced threshold). It's downloaded
 once into the Print Desk folder and refreshed monthly. MSFS scenery can differ
 a little from the real world, so treat a metre or two as normal.
@@ -74,21 +76,53 @@ def touchdown(rwy: dict, along_end: float, cross: float) -> dict:
             "cross": round(cross, 1), "tdz": tdz, "zone": round(zone), "width": round(rwy["width"])}
 
 
-def best_match(rows, lat, lon, track):
+def match_ends(all_ends, lat, lon, track):
     """The runway end you landed on: pointing your way, and you within its edges."""
     best = None
-    for row in rows:
-        if str(row.get("closed", "0")) == "1":
+    for rwy in all_ends:
+        if abs((track - rwy["hdg"] + 180) % 360 - 180) > 30:
             continue
-        for rwy in ends(row):
-            if abs((track - rwy["hdg"] + 180) % 360 - 180) > 30:
-                continue
-            along, cross = offsets(rwy["lat"], rwy["lon"], rwy["hdg"], lat, lon)
-            if not (-300 < along < rwy["length"] + 100) or abs(cross) > rwy["width"] / 2 + 15:
-                continue
-            if best is None or abs(cross) < abs(best[2]):
-                best = (rwy, along, cross)
+        along, cross = offsets(rwy["lat"], rwy["lon"], rwy["hdg"], lat, lon)
+        if not (-300 < along < rwy["length"] + 100) or abs(cross) > rwy["width"] / 2 + 15:
+            continue
+        if best is None or abs(cross) < abs(best[2]):
+            best = (rwy, along, cross)
     return touchdown(*best) if best else None
+
+
+def best_match(rows, lat, lon, track):
+    return match_ends([e for row in rows if str(row.get("closed", "0")) != "1" for e in ends(row)], lat, lon, track)
+
+
+DESIGNATORS = {1: "L", 2: "R", 3: "C", 4: "W", 5: "A", 6: "B"}
+COMPASS = {37: "N", 38: "NE", 39: "E", 40: "SE", 41: "S", 42: "SW", 43: "W", 44: "NW"}
+
+
+def runway_ident(number: int, designator: int) -> str:
+    base = f"{number:02d}" if 1 <= number <= 36 else COMPASS.get(number, "")
+    return base + DESIGNATORS.get(designator, "")
+
+
+def _move(lat, lon, bearing, dist):
+    b = math.radians(bearing)
+    return (lat + math.degrees(dist * math.cos(b) / EARTH),
+            lon + math.degrees(dist * math.sin(b) / (EARTH * math.cos(math.radians(lat)))))
+
+
+def sim_ends(airport: str, runways: list[dict], displaced: dict | None = None) -> list[dict]:
+    """Runway ends from the sim's own scenery (SimConnect facility data: centre,
+    true heading, length and width in metres). Displaced thresholds aren't in that
+    data reliably, so they come from OurAirports when the same runway is there."""
+    displaced = displaced or {}
+    out = []
+    for r in runways:
+        half = r["length"] / 2
+        for num, des, hdg in ((r["p_num"], r["p_des"], r["hdg"]), (r["s_num"], r["s_des"], (r["hdg"] + 180) % 360)):
+            ident = runway_ident(num, des)
+            lat, lon = _move(r["lat"], r["lon"], hdg + 180, half)          # the threshold end
+            out.append({"airport": airport, "ident": ident, "lat": lat, "lon": lon, "hdg": hdg,
+                        "length": r["length"], "width": r["width"], "displaced": displaced.get(ident, 0.0)})
+    return out
 
 
 class Runways:
@@ -131,10 +165,56 @@ class Runways:
                         out.append(row)
         return out
 
+    def nearby_airports(self, lat: float, lon: float) -> list[str]:
+        """Airports with a runway end close to this position (from the OurAirports file)."""
+        if not self.path.exists():
+            return []
+        seen = []
+        for row in self._rows(None, (lat, lon)):
+            a = row.get("airport_ident", "").upper()
+            if a and a not in seen:
+                seen.append(a)
+        return seen
+
+    def displaced(self, airport: str) -> dict:
+        """Displaced thresholds in metres per runway ident, from OurAirports."""
+        if not self.path.exists():
+            return {}
+        out = {}
+        for row in self._rows({airport.upper()}):
+            for e in ends(row):
+                out[e["ident"]] = e["displaced"]
+        return out
+
+    async def find_in_sim(self, sim, lat: float, lon: float, track: float, airports=()) -> dict | None:
+        """The runway from the scenery you're flying (needs a SimConnect.dll with the
+        facilities functions, see simconnect_source.py). None if that isn't available."""
+        if not sim or not getattr(sim, "facilities", False):
+            return None
+        tried = []
+        for icao in [a.upper() for a in airports if a] + self.nearby_airports(lat, lon):
+            if icao in tried or len(tried) >= 4:
+                continue
+            tried.append(icao)
+            rwys = await sim.airport_runways(icao)
+            if not rwys:
+                continue
+            hit = match_ends(sim_ends(icao, rwys, self.displaced(icao)), lat, lon, track)
+            if hit:
+                hit["source"] = "SCENERY"
+                return hit
+        return None
+
     async def find(self, lat: float, lon: float, track: float, airports=()) -> dict | None:
         """The runway and touchdown details, or None (no data, or not on a known runway)."""
         if not await self.ensure():
             return None
+        hit = self._find_file(lat, lon, track, airports)
+        if hit:
+            hit["source"] = "OURAIRPORTS"
+        return hit
+
+    def _find_file(self, lat, lon, track, airports):
         idents = {a.upper() for a in airports if a}
         key = ",".join(sorted(idents))
         if idents:

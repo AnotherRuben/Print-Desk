@@ -138,12 +138,17 @@ summary once you've slowed below 40 knots:
 - **At the flare** (50 ft): airspeed, sink rate and, if you typed your Vref in the panel's
   *Landing* tile, the deviation from it.
 - **At touchdown**: sink rate (the sim's own touchdown value), G, pitch, bank, crab, airspeed
-  and groundspeed, plus tail strike, wing/pod strike and bounces.
+  and groundspeed, plus tail strike, wing/pod strike and bounces. The G is the one as the wheels
+  touch (the first quarter second, ignoring single spiky frames), not later bumps from the nose
+  gear or spoilers, so it's comparable with Volanta and similar apps.
 - **Runway**: which runway, how far past the threshold you touched down, whether that was in
   the touchdown zone (the first 900 m, or a third of shorter runways), and how far off the
-  centreline. Uses the aircraft's position from MSFS and free runway data from OurAirports,
-  downloaded once into `runways.csv` and refreshed monthly. Scenery can differ a little from
-  the real world, so a metre or two is normal.
+  centreline (within 2 m prints as ON). The slip says where the runway came from:
+  - **Sim scenery**: the runways of the scenery you're flying, add-on airports included. Needs
+    the newer SimConnect.dll from the free MSFS SDK, see below.
+  - **Real world**: free runway data from OurAirports, downloaded once into `runways.csv` and
+    refreshed monthly. Scenery can be a few metres off from the real world, so take small
+    differences with a pinch of salt.
 - **Last seconds** (off by default): a second-by-second table from 10 s before touchdown to 3 s after.
 - A **landing score** out of 100: an open, simple formula (sink rate, G, bank, crab, bounces,
   touchdown zone and centreline).
@@ -153,11 +158,19 @@ summary once you've slowed below 40 knots:
   sink rate, and finally crab, bank and flare speed.
 
 The data comes straight from the sim through SimConnect, MSFS's own add-on interface, read
-about 20 times a second; nothing to install in MSFS. Windows only. Reports also go into the
+every sim frame; nothing to install in MSFS. Windows only. Reports also go into the
 datalink log (filter *Landings*), and *Print last* in the panel prints the latest again.
 Settings › Landing report has the print speed, a switch for each part of the slip, and the tail/wing strike limits
 (they differ per aircraft; about 10 degrees pitch suits most airliners).
 `printdesk test landing` prints a made-up one.
+
+**Runways from the sim scenery:** the SimConnect.dll that install.bat brings along is too old to
+ask MSFS for its runways. To use the scenery's runways, install the free MSFS SDK: in MSFS switch
+on *Developer Mode* (Options > General > Developers), then in the developer menu bar choose
+*Help > SDK Installer* and install it. Print Desk finds its SimConnect.dll by itself (restart
+Print Desk once). You can also copy `SimConnect.dll` from the SDK's `SimConnect SDK\lib` folder
+into the Print Desk folder. The panel's MSFS status says "runways from OurAirports" while the old
+DLL is in use.
 
 ## Auto-pause in busy flight phases
 
