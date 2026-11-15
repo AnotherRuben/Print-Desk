@@ -442,6 +442,8 @@ class Layouts:
             row("BOUNCES:", str(rep["bounces"]))
         if rep.get("touch_and_go"):
             row("", "TOUCH AND GO")
+        if rep.get("low_rate"):
+            row("NOTE:", "10 READINGS/SEC, LESS EXACT")
         if parts["trace"] and rep.get("trace"):
             s.rule().text("LAST SECONDS", bold=True)
             s.text(f"{'SEC':>4} {'AGL':>5} {'IAS':>4} {'V/S':>6} {'PITCH':>6} {'BANK':>5} {'G':>5}")

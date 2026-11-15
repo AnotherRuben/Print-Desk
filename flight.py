@@ -664,7 +664,8 @@ class Flight:
                 "print_mode": self.mode,
                 "vref": self.vref,
                 "landing": self.app.last_landing,
-                "msfs": self.app.state.conn.get("msfs"),
+                "msfs": (self.app.state.conn.get("xplane") if (self.app.state.conn.get("xplane") or {}).get("level") == "ok"
+                         else self.app.state.conn.get("msfs")),
                 "aircraft": {"type": self._ac[0], "source": self._ac[1]} if self._ac else None,
                 "listed": sorted(self.listed_types()),
                 "messages": [{"id": m["id"], "from": m["from"], "type": m["type"],
