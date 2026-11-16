@@ -337,18 +337,28 @@
 
   <section class="card" id="s-landing">
     <h2>Landing report</h2>
-    <p class="lead">After every landing in MSFS (2020 or 2024): sink rate, G, pitch, bank and crab at touchdown, bounces and a score, read straight from the sim through SimConnect. Type your Vref in the panel's Landing tile to see the deviation at the flare. Windows only; in the datalink log either way.</p>
-    <label class="check"><input type="checkbox" id="landing.enabled"><span>Record landings<small>Connects to MSFS while it's running</small></span></label>
+    <p class="lead">After every landing in MSFS (2020 or 2024) or X-Plane (11 or 12): sink rate, G, pitch, bank and crab at touchdown, bounces and a score, read straight from the sim. Type your Vref in the panel's Landing tile to see the deviation at the flare. In the datalink log either way.</p>
+    <label class="check"><input type="checkbox" id="landing.enabled"><span>Record landings<small>Connects to the sim while it's running</small></span></label>
+    <div class="field">
+      <label class="l">Sims</label>
+      <label class="check"><input type="checkbox" id="landing.msfs"><span>MSFS 2020 / 2024<small>Through SimConnect (Windows)</small></span></label>
+      <label class="check"><input type="checkbox" id="landing.xplane"><span>X-Plane 11 / 12 (experimental)<small>Not tested on a real X-Plane yet: tell us if something's off. Through X-Plane's network data. X-Plane 12: switch on Settings &gt; Network &gt; Accept incoming connections</small></span></label>
+    </div>
+    <div class="row3">
+      <div class="field"><label class="l" for="landing.xplane_host">X-Plane PC</label><input type="text" id="landing.xplane_host"><div class="hint">127.0.0.1 is this PC</div></div>
+      <div class="field"><label class="l" for="landing.xplane_port">X-Plane UDP port</label><input type="number" id="landing.xplane_port"><div class="hint">49000 unless you changed it</div></div>
+      <div class="field"><label class="l" for="landing.xplane_folder">X-Plane folder</label><input type="text" id="landing.xplane_folder"><div class="hint">Empty: found by itself. For its runway files</div></div>
+    </div>
     <div class="field"><label class="l" for="landing.when">When</label>
       <select id="landing.when">
         <option value="flight">Only during a flight (after "Start flight from SimBrief")</option>
-        <option value="always">Every landing in MSFS</option>
+        <option value="always">Every landing</option>
       </select></div>
     <label class="check"><input type="checkbox" id="landing.auto_print"><span>Print the report by itself<small>Off: only in the datalink log</small></span></label>
     <div class="field">
       <label class="l">On the slip</label>
       <label class="check"><input type="checkbox" id="landing.show_flare"><span>At the flare<small>Speed and sink rate at 50 ft, and the Vref deviation</small></span></label>
-      <label class="check"><input type="checkbox" id="landing.show_runway"><span>Runway, touchdown zone and centreline<small>Distance past the threshold and off the centreline, from OurAirports runway data</small></span></label>
+      <label class="check"><input type="checkbox" id="landing.show_runway"><span>Runway, touchdown zone and centreline<small>Distance past the threshold and off the centreline, from the sim's scenery or OurAirports</small></span></label>
       <label class="check"><input type="checkbox" id="landing.show_checks"><span>Strikes and bounces<small>Tail strike, wing/pod strike, number of bounces</small></span></label>
       <label class="check"><input type="checkbox" id="landing.trace"><span>Second-by-second table<small>The last 10 seconds before touchdown and 3 after</small></span></label>
       <label class="check"><input type="checkbox" id="landing.show_remarks"><span>Remarks when the score is low<small>Up to three points to work on, most important first</small></span></label>
