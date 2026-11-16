@@ -83,6 +83,7 @@ class XPlaneSource:
         self.values: dict[str, float] = {}
         self.pos: tuple[float, float] | None = None
         self.tail = [0] * TAIL_LEN
+        self.ground_ref: float | None = None   # y_agl (ft) while on the ground: the wheels' height is above this
         self.last_packet = 0.0
         self.last_sent = 0.0
         self.transport = None
@@ -205,8 +206,11 @@ class XPlaneSource:
             self.last_packet = time.monotonic()
 
     def _tail_info(self):
+        acid = bytes(c for c in self.tail if 32 < c < 127).decode("ascii", "ignore").strip()
+        if acid and acid != getattr(self, "_acid", None):
+            self._acid = acid
+            self.ground_ref = None                     # another aircraft: its height on the ground differs
         if self.on_info:
-            acid = bytes(c for c in self.tail if 32 < c < 127).decode("ascii", "ignore").strip()
             if acid:
                 self.on_info({"acid": acid})
 
@@ -218,6 +222,12 @@ class XPlaneSource:
         r = {"t": now, "td_vs": None}
         for _, key, conv in DATAREFS:
             r[key] = conv(self.values[key])
+        # X-Plane's y_agl is the height of the aircraft's reference point, which is several
+        # feet up even when parked. Measure from where it sits on the ground instead, so
+        # "agl" is the height of the wheels and a wheel unloading for a moment isn't a bounce.
+        if r["on_ground"] and 0 <= r["agl"] < 40:
+            self.ground_ref = r["agl"]
+        r["agl"] = max(0.0, r["agl"] - (self.ground_ref or 0.0))
         if self.pos:
             r["lat"], r["lon"] = self.pos
         self.on_reading(r)
